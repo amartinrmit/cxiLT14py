@@ -13,7 +13,7 @@ authors: Andrew Martin (andrew.martin@rmit.edu.au)
 
 
 import psana 
-
+import numpy as np
 
 class psanaBlackBox:
 
@@ -29,7 +29,7 @@ class psanaBlackBox:
 
         self.dsname_idx = 'exp='+exp+':run='+run+':idx'
         self.ds_idx = psana.DataSource( self.dsname_idx )
-
+        self.env_idx = self.ds_idx.env()
         #
         # get event times
         #
@@ -55,17 +55,25 @@ class psanaBlackBox:
         self.instrument = self.cspad.instrument()
 
     def get_wavelength( self, evt, src='SIOC:SYS0:ML00:AO192'):
-        wldet = psana.Detector( src, self.env_smd)
+        wldet = psana.Detector( src, self.env_idx)
         return wldet(evt)
 
 
     def get_photon_beam_energy( self, evt, src='SIOC:SYS0:ML00:AO541'):
-        phb = psana.Detector( src, self.env_smd )
+        phb = psana.Detector( src, self.env_idx )
         return phb(evt)
 
     def get_detector_z( self, evt, src='CXI:DS1:MMS:06.RBV'):
-        dzp = psana.Detector( src, self.env_smd)
+        dzp = psana.Detector( src, self.env_idx)
         return dzp(evt)
+
+    def get_pulse_length( self, evt, src='SIOC:SYS0:ML00:AO820' ):
+        pl = psana.Detector( src, self.env_idx )
+        return pl(evt)
+
+    def get_pulse_energy( self, evt, src='SIOC:SYS0:ML00:AO569' ):
+        pl = psana.Detector( src, self.env_idx )
+        return pl(evt)
 
     def qarrays( self, evt, cx=0.0, cy=0.0 ):
         
@@ -73,16 +81,16 @@ class psanaBlackBox:
         wavelength = self.get_wavelength( evt )
         q0 = 1/wavelength
 
-        qx = self.cspad.coords_x( evt ) * q0 / (self.cspad.coords_z + dz )
-        qy = self.cspad.coords_y( evt ) * q0 / (self.cspad.coords_z + dz )
+        qx = self.cspad.coords_x( evt ) * q0 / (self.cspad.coords_z(evt) + dz )
+        qy = self.cspad.coords_y( evt ) * q0 / (self.cspad.coords_z(evt) + dz )
         qz = q0
-        qz += q0
 
-        qlen = sqrt( qx*qx + qy*qy + qz*qz )
-        
-        qx = qx / qlen
-        qy = qy / qlen
-        qz = (qz / qlen) - q0
-        qabs = sqrt( qx*qx + qy*qy + qz*qz )
+        qlen = np.sqrt( qx*qx + qy*qy + qz*qz )
+        print "debug qarrays() q0 qlen", q0, np.min(qlen), np.max(qlen)
+
+        qx = qx * q0 / qlen
+        qy = qy * q0 / qlen
+        qz = (qz *q0 / qlen) - q0
+        qabs = np.sqrt( qx*qx + qy*qy + qz*qz )
 
         return [qx, qy, qz, qabs]
