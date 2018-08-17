@@ -20,6 +20,94 @@ class powder:
 
 #        self.qgrids
 
+    #
+    # Precalcualte the q indices for 1D powder plot
+    #
+    def set_up_q_indices( self, qarr, nqbins=500, qmin=-1, qmax=-1  ):
+
+        # step size
+        self.qstep = (qmax-qmin)/float(nqbins)
+        self.nqbins = nqbins
+        self.qsamps = np.zeros( nqbins )
+
+        #
+        # loop over qbins
+        #
+        self.iq = []
+        for i in np.arange(nqbins):
+            dq = qmin + i*self.qstep
+            self.qsamps[i] = dq
+#            iq = np.logical_and( (qarr>dq), qarr<dq+qstep )
+            self.iq.append( np.where( (qarr>dq) * (qarr<dq+self.qstep) ) )
+
+
+    #
+    # otf - " one the fly".
+    #
+    # Uses precalcualted q indices for each q shell
+    #
+    def powderplot_otf( self, data, mask, stdout=False, ccout=False): 
+        
+        nqbins = self.nqbins
+        # output arrays 
+        pplot = np.zeros( nqbins )
+
+        if stdout==True:
+            splot = np.zeros( nqbins )
+
+        if ccout==True:
+            ccplot = np.zeros( nqbins )
+
+        # step size
+        qstep = self.qstep 
+        
+        # apply mask
+        dtmp = data*mask
+
+        #
+        # loop over qbins
+        #
+        for i in np.arange(nqbins):
+            iq = self.iq[i]
+
+            pplot[i] = dtmp[ iq].sum()
+            norm = mask[iq].sum()
+            if norm>0:
+                pplot[i] *= 1./norm
+
+            if stdout==True:
+                splot[i] = np.sum(dtmp[ iq]**2)
+                if norm>0:
+                    splot[i] *= 1./norm
+
+            if ccout==True:
+                shift =  iq[0].size/3
+                iqr = ( np.roll( iq[0], shift ), np.roll( iq[1], shift ), np.roll( iq[2], shift ) )
+                #                print len(iqr), len(iq), iq[0].shape
+
+                ccnorm = np.sum(mask[ iq] * mask[iqr] ) 
+#                ccplot[i] = np.sum((dtmp[ iq]-pplot[i]) * (dtmp[iqr]-pplot[i]) ) 
+                ccplot[i] = np.sum(dtmp[ iq] * dtmp[iqr] ) 
+
+                if ccnorm>0:
+                    ccplot[i] *= 1./ccnorm
+                    ccplot[i] += - pplot[i]*pplot[i]
+
+        if stdout==True:
+            splot = np.sqrt( splot - pplot*pplot) 
+
+        output = [pplot]
+
+        if stdout==True:
+            output.append( splot )
+        if ccout==True:
+            output.append( ccplot )
+
+        return output
+
+
+
+
     def powderplot( self, data, qarr, mask, nqbins, qmin=-1, qmax=-1,\
                     stdout=False, ccout=False): 
         
