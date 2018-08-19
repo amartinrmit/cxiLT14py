@@ -94,3 +94,37 @@ class psanaBlackBox:
         qabs = np.sqrt( qx*qx + qy*qy + qz*qz )
 
         return [qx, qy, qz, qabs]
+
+    #
+    # convolve an assembled image. Account for mask
+    # assumes convoltion struct is real and positive
+    #
+    def convolve_assembled_image( self, image, mask, struct ):
+        
+        imc = np.convolve( image, struct )
+        maskc = np.convolve( mask, struct )
+        imask = np.where( maskc > 0.0 )
+        imc[imask] *= 1.0/maskc[imask]
+        return imc
+
+    #
+    # average intensity on 2x1 asics
+    # rebinx, rebiny - optional divide 2x1 asics into tiles and calculate average of times
+    # e.g. rebinx=1, rebiny=2 calculates intensity on 1x1 asics
+    #
+    def asic_intensity( self, data, rebinx=1, rebiny=1 ):
+
+        if rebin==1:
+            out = np.sum( data, 3)
+            out = np.sum( out, 2 )
+        else:
+            out = np.zeros( (data.shape[0], data.shape[1], rebinx, rebiny )) 
+            istep = data.shape[2]/rebinx
+            jstep = data.shape[3]/rebiny
+            for i in np.arange(rebinx):
+                for j in np.arange(rebiny):
+                    tmp = data[:,:,i*istep:(i+1)*istep,j*jstep:(j+1)*jstep]
+                    tmp = np.sum(  tmp, 3 )
+                    tmp2 = np.sum( tmp, 2 )
+                    out[:,:,i,j] = tmp2
+        return out

@@ -18,7 +18,7 @@ import scipy.ndimage as sdn
 class angular_correlation:
 
     
-    def polar_plot( x, y, data, nr, nth, rmin, rmax, thmin, thmax ):
+    def polar_plot( self, x, y, data, nr, nth, rmin, rmax, thmin, thmax ):
 
         # r and theta arrays
         rarr = np.outer( np.arange(nr)*(rmax-rmin)/float(nr) + rmin, np.ones(nth) )
@@ -31,7 +31,7 @@ class angular_correlation:
 
         return newdata.reshape( nr, nth )
 
-    def polarplot_angular_correlation( polar, polar2=None):
+    def polarplot_angular_correlation( self, polar, polar2=None):
 
         fpolar = np.fft.fft( polar, axis=2 )
 
@@ -45,13 +45,26 @@ class angular_correlation:
         return out
 
         
-    def apply_mask( func, mask ):
+    def apply_mask( self, func, mask ):
         return func*mask
 
 
-    def correct_mask_correlation( corr, maskcorr ):
+    def correct_mask_correlation( self, corr, maskcorr ):
         imask = np.where( maskcorr != 0 )
         corr[imask] *= 1.0/maskcorr[imask]
         return corr
 
+    #    
+    # pairwise correlation of (flattened) arrays
+    #
+    # not for angular correlations; good for correlation of mean asic values
+    #
+    def allpixel_correlation( self, arr1, arr2 ):
+        out = np.outer( arr1.flatten(), arr2.flatten() )
+        return out
+
+    def gaussian_filter_correlation( self, corr, qsig, thsig ):
         
+        # linspace for q and th values... 
+        # then turn that into guassian function
+        # then call convoluation function
