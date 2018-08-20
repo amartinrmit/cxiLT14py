@@ -18,15 +18,16 @@ import scipy.ndimage as sdn
 class angular_correlation:
 
     
-    def polar_plot( self, x, y, data, nr, nth, rmin, rmax, thmin, thmax ):
+    def polar_plot( self,data, nr, nth, rmin, rmax, thmin, thmax, cenx, ceny ):
 
         # r and theta arrays
         rarr = np.outer( np.arange(nr)*(rmax-rmin)/float(nr) + rmin, np.ones(nth) )
         tharr = np.outer( np.ones(nr), np.arange(nth)*(thmax-thmin)/float(nth) + thmin)
         
-        newx = rarr*np.cos( tharr )
-        newy = rarr*np.sin( tharr )
+        newx = rarr*np.cos( tharr ) + cenx
+        newy = rarr*np.sin( tharr ) + ceny
         
+        print "debug",  newx.flatten().shape, newx.flatten()[:5]
         newdata = sdn.map_coordinates( data, [newx.flatten(), newy.flatten()], order=3 )
 
         return newdata.reshape( nr, nth )
@@ -63,7 +64,7 @@ class angular_correlation:
         out = np.outer( arr1.flatten(), arr2.flatten() )
         return out
 
-    def gaussian_filter_correlation( self, corr, qsig, thsig ):
+#    def gaussian_filter_correlation( self, corr, qsig, thsig ):
         
         # linspace for q and th values... 
         # then turn that into guassian function

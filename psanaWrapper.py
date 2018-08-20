@@ -114,17 +114,17 @@ class psanaBlackBox:
     #
     def asic_intensity( self, data, rebinx=1, rebiny=1 ):
 
-        if rebin==1:
-            out = np.sum( data, 3)
-            out = np.sum( out, 2 )
+        if (rebinx==1) and (rebiny==1):
+            out = np.sum( data, 2)
+            out = np.sum( out, 1 )
         else:
-            out = np.zeros( (data.shape[0], data.shape[1], rebinx, rebiny )) 
-            istep = data.shape[2]/rebinx
-            jstep = data.shape[3]/rebiny
+            out = np.zeros( (data.shape[0], rebinx, rebiny )) 
+            istep = data.shape[1]/rebinx
+            jstep = data.shape[2]/rebiny
             for i in np.arange(rebinx):
                 for j in np.arange(rebiny):
-                    tmp = data[:,:,i*istep:(i+1)*istep,j*jstep:(j+1)*jstep]
-                    tmp = np.sum(  tmp, 3 )
-                    tmp2 = np.sum( tmp, 2 )
-                    out[:,:,i,j] = tmp2
+                    tmp = data[:,i*istep:(i+1)*istep,j*jstep:(j+1)*jstep]
+                    tmp = np.sum(  tmp, 2 )
+                    tmp2 = np.sum( tmp, 1 )
+                    out[:,i,j] = tmp2
         return out
