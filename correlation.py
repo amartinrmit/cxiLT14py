@@ -18,7 +18,7 @@ import scipy.ndimage as sdn
 class angular_correlation:
 
     
-    def polar_plot( self,data, nr, nth, rmin, rmax, thmin, thmax, cenx, ceny ):
+    def polar_plot( self,data, nr, nth, rmin, rmax, thmin, thmax, cenx, ceny, submean=False ):
 
         # r and theta arrays
         rarr = np.outer( np.arange(nr)*(rmax-rmin)/float(nr) + rmin, np.ones(nth) )
@@ -30,19 +30,28 @@ class angular_correlation:
         print "debug",  newx.flatten().shape, newx.flatten()[:5]
         newdata = sdn.map_coordinates( data, [newx.flatten(), newy.flatten()], order=3 )
 
-        return newdata.reshape( nr, nth )
+        out = newdata.reshape( nr, nth )
+        if submean == True:
+            out = self.polar_plot_subtract_rmean( out  )
+
+        return out
+
+    def polar_plot_subtract_rmean( self, pplot ):
+
+        av = np.average( pplot, 1 )
+        out = pplot -np.outer( av, np.ones( pplot.shape[1] ) )
+        return out
 
     def polarplot_angular_correlation( self, polar, polar2=None):
 
-        fpolar = np.fft.fft( polar, axis=2 )
+        fpolar = np.fft.fft( polar, axis=1 )
 
         if polar2 != None:
-            fpolar2 = np.fft.fft( polar2, axis=2)
+            fpolar2 = np.fft.fft( polar2, axis=1)
+            out = np.fft.ifft( fpolar2.conjugate() * fpolar, axis=1 )
         else:
-            fpolar2 = fpolar
-
-        out = np.fft.ifft( fpolar2.conjugate() * fpolar )
-        
+            out = np.fft.ifft( fpolar.conjugate() * fpolar, axis=1 )
+       
         return out
 
         
@@ -50,7 +59,7 @@ class angular_correlation:
         return func*mask
 
 
-    def correct_mask_correlation( self, corr, maskcorr ):
+    def mask_correction( self, corr, maskcorr ):
         imask = np.where( maskcorr != 0 )
         corr[imask] *= 1.0/maskcorr[imask]
         return corr
