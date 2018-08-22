@@ -20,7 +20,7 @@ script = "sumdata.py"
 params = {}
 
 # common parameters (all parameter values are given as strings)
-params["--datapath"] = "/reg/neh/home/amartin/2018/cxi10016/results/run7/"
+params["--outpath"] = "/reg/neh/home/amartin/2018/cxi10016/results/run7/"
 params["--exp"] = 'cxip10016'
 params["--run"] = '7'
 params["--nstart"] = '0'
@@ -35,9 +35,11 @@ params["--raw"] = 'False'
 params["--applymask"] = 'True'
 
 
+# generate the command line string from the dictionary of arguments
 command = "python "+script+" "
 for d, e in params.items():
     command += d+" "+e+" "
 
+# run the script
 print command
 system( command )

@@ -26,13 +26,13 @@ atp.parser.add_argument( "--outputext", help="File extention for output image: .
 atp.parser.add_argument( "--average", help="Choose to output data average or data sum", type=bool, default=True)
 atp.parser.add_argument( "--assemble",  help="assemble data (true) or leave as array of asic data", type=bool, default=True)
 atp.parser.add_argument( "--raw", help="output uncorrected data (true) or all corrections [dark/gain/common mode]", type=bool, default=False)
-atp.parser.add_argument( "--applymask", nargs=1, help="apply a mask retrieved from psana", type=bool, default=True)
+atp.parser.add_argument( "--applymask", help="apply a mask retrieved from psana", type=bool, default=True)
 
 # parse the command line arguments
 atp.parse_arguments()
 
 # write all the input arguments to a log file
-atp.write_all_params_to_file()
+atp.write_all_params_to_file( script=atp.parser.prog )
 
 
 #
@@ -46,7 +46,7 @@ psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
 # retrieve mask if required
 #
 if atp.args.applymask == True:
-    mask = psbb.cspad.mask(evt, calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
+    mask = psbb.cspad.mask( psbb.run.event( psbb.times[0]), calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
 
 #
 # sum nframes of data from a run
