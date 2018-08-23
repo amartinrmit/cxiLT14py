@@ -23,29 +23,27 @@ atp = at.params.parameters()
 
 # add another command line argument
 atp.parser.add_argument( "--outputext", help="File extention for output image: .dbin or .h5", default="dbin")
-atp.parser.add_argument( "--average", help="Choose to output data average or data sum", type=bool, default=True)
-atp.parser.add_argument( "--assemble",  help="assemble data (true) or leave as array of asic data", type=bool, default=True)
+
 atp.parser.add_argument( "--raw", help="output uncorrected data (true) or all corrections [dark/gain/common mode]", type=bool, default=False)
-atp.parser.add_argument( "--applymask", help="apply a mask retrieved from psana", type=bool, default=True)
 
 atp.parser.add_argument( "--normalize", help="normalize the data by the average pixels intensity", type=bool, default=True)
 atp.parser.add_argument( "--diffCorr", help="Calculate the correlation of intenisty difference between current frame and a random frame.", type=bool, default=True)
 atp.parser.add_argument( "--randomXcorr", help="Calculate the correlation between current frame and a random frame.", type=bool, default=False)
-atp.parser.add_argument( "--normalize", help="normalize the data by the average pixels intensity", type=bool, default=True)
 
 atp.parser.add_argument( "--pcrange", nargs=4, help="pixel range to evaluate the similarity (pearson correlation) of odd/even frame angular correlation functions ", type=int)
 
-atp.parser.add_argument( "--polarRange", nargs=4, help="pixel range to evaluate polar plots of assembled images ", type=int)
+atp.parser.add_argument( "--polarRange", nargs=4, help="pixel range to evaluate polar plots of assembled images ", type=float)
 atp.parser.add_argument( "--nq", help="number of radial (q) polar bins ", type=int)
 atp.parser.add_argument( "--nth", help="number of angular polar bins ", type=int)
+atp.parser.add_argument( "--minI", help="minimum total integrated intensity ", type=float, default=1e5)
 
-atp.parser.add_argument( "--cenx", help="beam centre in pixels from middle of assmebled array - xcoord ", type=int)
-atp.parser.add_argument( "--ceny", help="beam centre in pixels from middle of assmebled array - ycoord ", type=int)
+#atp.parser.add_argument( "--cenx", help="beam centre in pixels from middle of assembled array : xcoord ", type=int)
+#atp.parser.add_argument( "--ceny", help="beam centre in pixels from middle of assembled array : ycoord ", type=int)
 
 
 # parse the command line arguments
 atp.parse_arguments()
-
+print "raw", atp.args.raw
 # write all the input arguments to a log file
 atp.write_all_params_to_file( script=atp.parser.prog )
 
@@ -60,37 +58,52 @@ psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
 # angular correlation struct
 ac = at.correlation.angular_correlation()
 
-#
-# retrieve mask if required
-#
-if atp.args.applymask == True:
-    mask = psbb.cspad.mask( psbb.run.event( psbb.times[0]), calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
-
 # copy some parameters for polar plot
 nq, nth = atp.args.nq, atp.args.nth
-rmin, rmax, thmin, thmax = atp.args.polarRange[0], atp.args.polarRange[1], atp.args.polarRange[2], atp.args.polarRange[3]
+qmin, qmax, thmin, thmax = atp.args.polarRange[0], atp.args.polarRange[1], atp.args.polarRange[2], atp.args.polarRange[3]
 cenx, ceny = atp.args.cenx, atp.args.ceny
+
+
+#
+# retrieve mask and calculate its angular correlation
+#
+mask = psbb.cspad.mask( psbb.run.event( psbb.times[0]), calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
+#assembled image of mask
+imgmsk =  psbb.cspad.image(psbb.evt,mask)
+ione = np.where( imgmsk < 1.0 )
+imgmsk[ione] = 0.0
+# polar plot of mask
+pplot_mask = ac.polar_plot( imgmsk, nq, nth, qmin, qmax, thmin, thmax, cenx+imgmsk.shape[0]/2, ceny+imgmsk.shape[1]/2, submean=True )
+ineg = np.where( pplot_mask < 0.0 )
+pplot_mask[ineg] = 0.0
+#angular correlation of mask
+corrqq_mask = ac.polarplot_angular_correlation( pplot_mask )
+
 
 #
 # sum nframes of data from a run
 #
-datasum = psbb.cspad.calib( psbb.evt ) * 0.0
-corrqqsum = np.zeros( (nr,nth,m) )
-if atp.args.randXcorr == True:
-    corrqqsumX = np.zeros( (nr,nth,m) )
+s = psbb.cspad.calib( psbb.evt ).shape
+datasum =  np.zeros( (s[0], s[1], s[2], 2 ))
+pplotsum = np.zeros( (nq,nth,2) )
+corrqqsum = np.zeros( (nq,nth,2) )
+nprocessed = np.zeros( 2 )
+if atp.args.randomXcorr == True:
+    corrqqsumX = np.zeros( (nq,nth,2) )
    
-
+totalIList = []
 for i, t in enumerate( psbb.times, atp.args.nstart ):
     if i>=(atp.args.nframes+atp.args.nstart):
         break
 
-    oddEven = i % 2
+    m = i % 2
 
     if atp.args.verbose >0:
         print "Processing event ", i
     evt = psbb.run.event(t)
 
-    j = np.int( np.random.rand()*len(psbb.times) )
+#    j = np.int( np.random.rand()*len(psbb.times) ) 
+    j = np.int( np.random.rand()*atp.args.nframes ) + atp.args.nstart
     evtj = psbb.run.event(psbb.times[j])
 
     # sum the data
@@ -101,9 +114,23 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         data = psbb.cspad.calib( evt )
         data2 = psbb.cspad.calib( evtj )
 
+    totalI = data.sum()
+    totalI2 = data2.sum()
+    if atp.args.verbose >0:
+        print "total intenisty :", totalI, totalI2
+
+    if (totalI < atp.args.minI) or (totalI2 < atp.args.minI):
+        print "Skipping event. Integrated intensity too low"
+        continue
+    else:
+        nprocessed[m] += 1
+        totalIList.append( [totalI, totalI2] )
+
     if atp.args.normalize==True:
         data *= 1.0/np.average(data*mask)
         data2 *= 1.0/np.average(data2*mask)
+
+    datasum[:,:,:,m] += data*mask
 
     if atp.args.diffCorr == True:
         diff = data - data2
@@ -113,6 +140,8 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 
     pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
     corrqq = ac.polarplot_angular_correlation( pplot )      
+    
+    pplotsum[:,:,m] += pplot
     corrqqsum[:,:,m] += corrqq
 
 
@@ -123,7 +152,15 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         pplot2 = ac.polar_plot( img2, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
         corrqq = ac.polarplot_angular_correlation( pplot, pplot2 )      
         corrqqsumX[:,:,m] += corrqq
-    
+
+# divide by number of processed frames
+corrqqsum[:,:,0] *= 1.0/float(nprocessed[0])
+corrqqsum[:,:,1] *= 1.0/float(nprocessed[1])
+
+print "Number of procesed frames even/odd", nprocessed
+totalIarr = np.array(totalIList)
+print "Min max integrated intensity :", np.min(totalIarr), np.max(totalIarr)
+
 #
 # correct correlations by mask correlation
 #
@@ -137,15 +174,39 @@ if atp.args.randomXcorr == True:
 #
 # pearson correlation to measure similarity of odd/even frame angular correlations
 #
-pc = ac.pearsoncorrelation2D( corrqqsum[:,:,0], corrqqsum[:,:,1], lim=atp.args.pcrange )
+pc = ac.pearsonCorrelation2D( corrqqsum[:,:,0], corrqqsum[:,:,1], lim=atp.args.pcrange )
+pca = ac.pearsonCorrelation2D_angular( corrqqsum[:,:,0], corrqqsum[:,:,1], lim=atp.args.pcrange )
 
-print "Pearson value of odd/even frame angular correlation :", pc
+if atp.args.verbose > 0:
+    print "Pearson value of odd/even frame angular correlation :", pc
+    print "Pearson value of odd/even frame angular correlation function of q :", pca
+    print "average of q-ring pearson correlations :", pca.mean()
+
+outname = at.io.formatted_filename( atp.args, "pearson_values", "txt", prog=atp.parser.prog )
+f = open( outname, 'w' )
+f.write( "Pearson value of odd/even frame angular correlation :"+str(pc)+"\n" ) 
+f.write("Pearson value of odd/even frame angular correlation function of q : \n")
+for i in np.arange(pca.size):
+    f.write( str(pca[i])+" ")
+f.write("\n")
+f.write( "average of q-ring pearson correlations :"+str(pca.mean())+"\n")
+f.close()
 
 
 #
 # save some output
 #
-at.io.saveImage( atp.args, corrqqsum[:,:,0], "even_frame_angular_correlation", prog=at.parser.prog )   
-at.io.saveImage( atp.args, corrqqsum[:,:,1], "odd_frame_angular_correlation", prog=at.parser.prog )   
-at.io.saveImage( atp.args, np.sum(corrqqsum,2), "total_angular_correlation", prog=at.parser.prog )   
+lim = atp.args.pcrange
+at.io.saveImage( atp.args, corrqqsum[lim[0]:lim[1],lim[2]:lim[3],0], "even_frame_angular_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, corrqqsum[lim[0]:lim[1],lim[2]:lim[3],1], "odd_frame_angular_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, np.sum(corrqqsum[lim[0]:lim[1],lim[2]:lim[3],:],2), "total_angular_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, corrqq_mask[lim[0]:lim[1],lim[2]:lim[3]], "mask_angular_correlation", prog=atp.parser.prog )   
+img = psbb.cspad.image(evt,datasum[:,:,:,0])
+at.io.saveImage( atp.args, img, "datasum_even", prog=atp.parser.prog )   
+
+img = psbb.cspad.image(evt,datasum[:,:,:,1])
+at.io.saveImage( atp.args, img, "datasum_odd", prog=atp.parser.prog )   
+
+at.io.saveImage( atp.args, pplotsum[:,:,0], "polarplotsum_even", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, pplotsum[:,:,1], "polarplotsum_odd", prog=atp.parser.prog )   
 
