@@ -73,6 +73,18 @@ class angular_correlation:
         out = np.outer( arr1.flatten(), arr2.flatten() )
         return out
 
+    def pearsonCorrelation2D( self, arr1, arr2, lim=None):
+        if lim == None:
+            lim = [0, arr1.shape[0], 0, arr1.shape[1]]
+
+        a1 = arr1[lim[0]:lim[1],lim[2]:lim[3]]
+        a2 = arr2[lim[0]:lim[1],lim[2]:lim[3]]
+        
+        c1 = a1 - np.average(a1)
+        c2 = a2 - np.average(a2)
+        pc = np.sum( c1*c2 ) /np.sqrt( np.sum(c1*c1) * np.sum(c2*c2))
+        return pc
+
 #    def gaussian_filter_correlation( self, corr, qsig, thsig ):
         
         # linspace for q and th values... 
