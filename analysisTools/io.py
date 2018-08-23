@@ -84,3 +84,23 @@ def h5write(filename,data,field="data/data"):
      f = h5py.File(filename, 'w')    # overwrite any existing file
      dset = f.create_dataset(field, data=data)
      f.close()
+
+def saveImage( args, array, prog, tail, prog=None, h5field="/image" ):
+
+    #set file name
+    outname = args.outpath
+    if prog != None:
+        outname += prog[:-3]+"_"
+    outname += args.exp+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."++args.outputext
+
+    if args.outputext == "dbin":
+        write_dbin( outname, array )
+    elif args.outputext == "h5":
+        h5write( outname, array, field=h5field )
+    else:
+        try:
+            plt.imsave( outname, array)
+        except:
+            print "error: cxiLT14py; analysisTools.io.saveImage"
+            print "Either unknown extension:", args.outputext
+            print "OR unknown location :", outname
