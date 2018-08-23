@@ -16,7 +16,7 @@ import os
 import array
 import struct
 import h5py
-
+import matplotlib.pyplot as plt
 
 #
 # reads a binary file of floating point numbers (no headers)
@@ -85,22 +85,36 @@ def h5write(filename,data,field="data/data"):
      dset = f.create_dataset(field, data=data)
      f.close()
 
-def saveImage( args, array, prog, tail, prog=None, h5field="/image" ):
+def saveImage( args, array, tail, ext=None, prog=None, h5field="/image" ):
 
     #set file name
     outname = args.outpath
+    if ext == None:
+        ext = args.outputext
+    
     if prog != None:
         outname += prog[:-3]+"_"
-    outname += args.exp+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."++args.outputext
+    
+    outname += args.exp+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."+ext
 
-    if args.outputext == "dbin":
+    if ext == "dbin":
         write_dbin( outname, array )
-    elif args.outputext == "h5":
+    elif ext == "h5":
         h5write( outname, array, field=h5field )
     else:
-        try:
-            plt.imsave( outname, array)
-        except:
-            print "error: cxiLT14py; analysisTools.io.saveImage"
-            print "Either unknown extension:", args.outputext
-            print "OR unknown location :", outname
+    #    try:
+        plt.imsave( outname, array)
+    #    except:
+      #      print "error: cxiLT14py; analysisTools.io.saveImage"
+    #        print "Either unknown extension:", args.outputext
+    #        print "OR unknown location :", outname
+
+    print "Saved image :", outname
+
+def formatted_filename( args, tail, ext, prog=None ):
+
+    outname = args.outpath
+    if prog != None:
+        outname += prog[:-3]+"_"
+    outname += args.exp+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."+ext
+    return outname
