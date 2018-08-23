@@ -85,8 +85,10 @@ else:
 
 
 
-outname = atp.args.outpath+atp.args.exp+"_"+atp.args.run+"_nstart_"+str(atp.args.nstart)+"_nframes_"+str(atp.args.nframes)+"_datasum."+atp.args.outputext
-if atp.args.outputext == "dbin":
-    at.io.write_dbin( outname, output )
-elif atp.args.outputext == "h5":
-    at.io.h5write( outname, field="/datasum" )
+#outname = atp.args.outpath+atp.args.exp+"_"+atp.args.run+"_nstart_"+str(atp.args.nstart)+"_nframes_"+str(atp.args.nframes)+"_datasum."+atp.args.outputext
+#if atp.args.outputext == "dbin":
+#    at.io.write_dbin( outname, output )
+#elif atp.args.outputext == "h5":
+#    at.io.h5write( outname, output, field="/datasum" )
+
+at.io.saveImage( atp.args, output, "datasum", prog=at.parser.prog )   
