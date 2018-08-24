@@ -27,7 +27,6 @@ class angular_correlation:
         newx = rarr*np.cos( tharr ) + cenx
         newy = rarr*np.sin( tharr ) + ceny
         
-        print "debug",  newx.flatten().shape, newx.flatten()[:5]
         newdata = sdn.map_coordinates( data, [newx.flatten(), newy.flatten()], order=3 )
 
         out = newdata.reshape( nr, nth )
@@ -73,10 +72,11 @@ class angular_correlation:
         out = np.outer( arr1.flatten(), arr2.flatten() )
         return out
 
+    # pearson correlation of a 2D area
     def pearsonCorrelation2D( self, arr1, arr2, lim=None):
         if lim == None:
             lim = [0, arr1.shape[0], 0, arr1.shape[1]]
-
+      
         a1 = arr1[lim[0]:lim[1],lim[2]:lim[3]]
         a2 = arr2[lim[0]:lim[1],lim[2]:lim[3]]
         
@@ -85,8 +85,36 @@ class angular_correlation:
         pc = np.sum( c1*c2 ) /np.sqrt( np.sum(c1*c1) * np.sum(c2*c2))
         return pc
 
+# returns pearson correlation of each q ring
+    def pearsonCorrelation2D_angular( self, arr1, arr2, lim=None):
+        if lim == None:
+            lim = [0, arr1.shape[0], 0, arr1.shape[1]]
+      
+        a1 = arr1[lim[0]:lim[1],lim[2]:lim[3]]
+        a2 = arr2[lim[0]:lim[1],lim[2]:lim[3]]
+        
+        c1 = a1 - np.outer( np.average(a1, 1), np.ones( a1.shape[1]) )
+        c2 = a2 - np.outer( np.average(a2, 1), np.ones( a2.shape[1]) )
+        pc = np.sum( c1*c2, 1 ) /np.sqrt( np.sum(c1*c1, 1) * np.sum(c2*c2, 1))
+        return pc
+
 #    def gaussian_filter_correlation( self, corr, qsig, thsig ):
         
         # linspace for q and th values... 
         # then turn that into guassian function
         # then call convoluation function
+
+    def process_asiccorrsum( self, corr, datasum, maskasic, n):
+
+        # divide by number of processed frames
+        c = corr / float(n)
+        d = datasum / float(n)
+
+        # correct asic correlation with mean
+        mean_asic_corr = self.allpixel_correlation( d, d)
+        c += - mean_asic_corr
+        
+        # pearson correlation of offdiagonal parts
+        offdiag0 = c-np.diag(np.diag(c))
+
+        return c, mean_asic_corr, offdiag0
