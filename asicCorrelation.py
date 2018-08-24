@@ -75,6 +75,7 @@ nprocessed = np.zeros( 2 )
 if atp.args.randomXcorr == True:
     asiccorrsumX = np.zeros( (32,32,2) )
    
+offdiagstats = []
 totalIList = []
 for i, t in enumerate( psbb.times, atp.args.nstart ):
     if i>=(atp.args.nframes+atp.args.nstart):
@@ -133,6 +134,19 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         d2 = psbb.asic_intensity( data2*mask )/maskasic
         asiccorrsumX[:,:,m] += ac.allpixel_correlation( d, d2 )
 
+    #
+    #  get some statistics of the off diagonal asic correlation terms
+    #
+    d = psbb.asic_intensity( datasum[:,:,:,0]*mask ) /maskasic
+    c0, mac0, od0 = ac.process_asiccorrsum( asiccorrsum[:,:,0], d, maskasic, nprocessed[0] )
+
+    d = psbb.asic_intensity( datasum[:,:,:,1]*mask ) /maskasic
+    c1, mac1, od1 = ac.process_asiccorrsum( asiccorrsum[:,:,1], d, maskasic, nprocessed[1] )
+
+    offdiagstats.append( [od0.mean(), od0.std(), od1.mean(), od1.std()])
+
+
+
 # divide by number of processed frames
 asiccorrsum[:,:,0] *= 1.0/float(nprocessed[0])
 asiccorrsum[:,:,1] *= 1.0/float(nprocessed[1])
@@ -146,16 +160,24 @@ print "Min max integrated intensity :", np.min(totalIarr), np.max(totalIarr)
 
 # correct asic correlation with mean
 d = psbb.asic_intensity( datasum[:,:,:,0]*mask ) /maskasic
-asiccorrsum[:,:,0] += - ac.allpixel_correlation( d, d)
+mean_asic_corr0 = ac.allpixel_correlation( d, d)
+asiccorrsum[:,:,0] += - mean_asic_corr0
 
 d = psbb.asic_intensity( datasum[:,:,:,1]*mask ) /maskasic
-asiccorrsum[:,:,1] += - ac.allpixel_correlation( d, d)
+mean_asic_corr1 = ac.allpixel_correlation( d, d)
+asiccorrsum[:,:,1] += - mean_asic_corr1
 
 
 #
 # pearson correlation to measure similarity of odd/even frame asic correlations
 #
-pc = ac.pearsonCorrelation2D( asiccorrsum[:,:,0], asiccorrsum[:,:,1], lim=atp.args.pcrange )
+offdiag0 = asiccorrsum[:,:,0]-np.diag(np.diag(asiccorrsum[:,:,0]))
+offdiag1 = asiccorrsum[:,:,1]-np.diag(np.diag(asiccorrsum[:,:,1]))
+
+pc = ac.pearsonCorrelation2D( offdiag0, offdiag1, lim=atp.args.pcrange )
+
+print "mean std offdiag even:", offdiag0.mean(), offdiag0.std()
+print "mean std offdiag odd:", offdiag1.mean(), offdiag1.std()
 
 
 if atp.args.verbose > 0:
@@ -166,6 +188,22 @@ f = open( outname, 'w' )
 f.write( "Pearson value of odd/even frame asic correlation :"+str(pc)+"\n" ) 
 f.close()
 
+#
+# normalize by diagonal to get cross-correlation coefficients
+#
+diag0 = np.sqrt(np.diag( np.abs(asiccorrsum[:,:,0]) ))
+diag0corr = ac.allpixel_correlation( diag0, diag0)
+
+diag1 = np.sqrt(np.diag( np.abs(asiccorrsum[:,:,1]) ))
+diag1corr = ac.allpixel_correlation( diag1, diag1)
+
+ccmatrix_even = asiccorrsum[:,:,0] / diag0corr
+ccmatrix_odd = asiccorrsum[:,:,1] / diag1corr
+
+print "diag0 (even)", diag0
+print "diag1 (odd)", diag1
+print "ccmatrix even diag", np.diag(ccmatrix_even)
+print "ccmatrix odd  diag", np.diag(ccmatrix_odd)
 
 #
 # save some output
@@ -174,6 +212,15 @@ lim = atp.args.pcrange
 at.io.saveImage( atp.args, asiccorrsum[:,:,0], "even_frame_asic_correlation", prog=atp.parser.prog )   
 at.io.saveImage( atp.args, asiccorrsum[:,:,1], "odd_frame_asic_correlation", prog=atp.parser.prog )   
 at.io.saveImage( atp.args, np.sum(asiccorrsum,2), "total_asic_correlation", prog=atp.parser.prog )   
+
+at.io.saveImage( atp.args, mean_asic_corr0, "even_frame_mean_asic_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, mean_asic_corr1, "odd_frame_mean_asic_correlation", prog=atp.parser.prog )   
+
+at.io.saveImage( atp.args, ccmatrix_even, "even_frame_asic_cross_correlation_coefficients", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, ccmatrix_odd, "odd_frame_mean_asic_cross_correlation_coefficients", prog=atp.parser.prog )   
+
+
+
 img = psbb.cspad.image(evt,datasum[:,:,:,0])
 at.io.saveImage( atp.args, img, "datasum_even", prog=atp.parser.prog )   
 
@@ -191,3 +238,10 @@ for asic in np.arange(mask.shape[0]):
     imgcmap = psbb.cspad.image(evt,cmap)
     at.io.saveImage( atp.args , imgcmap, "_even_asic_correlation_map"+str(asic), ext='jpg', prog=atp.parser.prog  )
 
+#
+# save the offdiagonal stats
+#
+offdiagstats = np.array(offdiagstats)
+outname = at.io.formatted_filename( atp.args, "offdiagstats", "txt", prog=atp.parser.prog )
+np.savetxt( outname, offdiagstats )
+print "save file :", outname
