@@ -41,6 +41,9 @@ class angular_correlation:
         out = pplot -np.outer( av, np.ones( pplot.shape[1] ) )
         return out
 
+    #
+    # performs the angular correlation of each q-shell with itself
+    #
     def polarplot_angular_correlation( self, polar, polar2=None):
 
         fpolar = np.fft.fft( polar, axis=1 )
@@ -51,6 +54,26 @@ class angular_correlation:
         else:
             out = np.fft.ifft( fpolar.conjugate() * fpolar, axis=1 )
        
+        return out
+
+    #
+    # angular correlation of each q-shell with all other q-shells
+    #
+    def polarplot_angular_intershell_correlation( self, polar, polar2=None):
+
+        fpolar = np.fft.fft( polar, axis=1 )
+
+        if polar2 != None:
+            fpolar2 = np.fft.fft( polar2, axis=1)
+        else:
+            fpolar2 = fpolar
+      
+        out = np.zeros( (polar.shape[0],polar.shape[0],polar.shape[1]) )
+        for i in np.arange(polar.shape[0]):
+            for j in np.arange(polar.shape[0]):
+                out[i,j,:] = fpolar[i,:]*fpolar2[j,:].conjugate()
+        out = np.fft.ifft( out, axis=2 )
+
         return out
 
         
@@ -117,4 +140,10 @@ class angular_correlation:
         # pearson correlation of offdiagonal parts
         offdiag0 = c-np.diag(np.diag(c))
 
-        return c, mean_asic_corr, offdiag0
+        # normalize
+        diag1 = np.sqrt(np.diag( np.abs(c) ))
+        diag1corr = self.allpixel_correlation( diag1, diag1)
+        cc = c / diag1corr
+        cc_offdiag = cc-np.diag(np.diag(cc))
+
+        return c, mean_asic_corr, offdiag0, cc, cc_offdiag
