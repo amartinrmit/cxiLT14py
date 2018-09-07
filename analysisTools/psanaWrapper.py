@@ -64,8 +64,14 @@ class psanaBlackBox:
         return phb(evt)
 
     def get_detector_z( self, evt, src='CXI:DS1:MMS:06.RBV'):
-        dzp = psana.Detector( src, self.env_idx)
-        return dzp(evt)
+        try:
+            dzp = psana.Detector( src, self.env_idx)
+            dz = dzp(evt)
+        except:
+            dz = 0.5
+            print "(psanaWrapper.py) No detector distance found."
+                
+        return dz
 
     def get_pulse_length( self, evt, src='SIOC:SYS0:ML00:AO820' ):
         pl = psana.Detector( src, self.env_idx )
@@ -127,4 +133,18 @@ class psanaBlackBox:
                     tmp = np.sum(  tmp, 2 )
                     tmp2 = np.sum( tmp, 1 )
                     out[:,i,j] = tmp2
+        return out
+
+    def nda_from_asic_intensity( self, asicI, shape, rebinx=1, rebiny=1 ):
+
+        out  = np.zeros( shape )
+        for asic in np.arange(shape[0]):
+            if (rebinx==1) and (rebiny==1):
+                out[asic,:,:] = asicI[asic]
+            else:
+                istep = shape[1]/rebinx
+                jstep = shape[2]/rebiny
+                for i in np.arange(rebinx):
+                    for j in np.arange(rebiny):
+                        out[asic,i*istep:(i+1)*istep,j*jstep:(j+1)*jstep] = asicI[asic,i,j]
         return out
