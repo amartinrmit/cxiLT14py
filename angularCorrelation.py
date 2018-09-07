@@ -27,7 +27,7 @@ atp.parser.add_argument( "--outputext", help="File extention for output image: .
 atp.parser.add_argument( "--raw", help="output uncorrected data (true) or all corrections [dark/gain/common mode]", type=bool, default=False)
 
 atp.parser.add_argument( "--normalize", help="normalize the data by the average pixels intensity", type=bool, default=True)
-atp.parser.add_argument( "--diffCorr", help="Calculate the correlation of intenisty difference between current frame and a random frame.", type=bool, default=True)
+atp.parser.add_argument( "--diffCorr", help="Calculate the correlation of intenisty difference between current frame and a random frame.", type=bool, default=False)
 atp.parser.add_argument( "--randomXcorr", help="Calculate the correlation between current frame and a random frame.", type=bool, default=False)
 
 atp.parser.add_argument( "--pcrange", nargs=4, help="pixel range to evaluate the similarity (pearson correlation) of odd/even frame angular correlation functions ", type=int)
@@ -44,6 +44,7 @@ atp.parser.add_argument( "--minI", help="minimum total integrated intensity ", t
 # parse the command line arguments
 atp.parse_arguments()
 print "raw", atp.args.raw
+print "diffCorr", atp.args.diffCorr
 # write all the input arguments to a log file
 atp.write_all_params_to_file( script=atp.parser.prog )
 
@@ -86,6 +87,7 @@ corrqq_mask = ac.polarplot_angular_correlation( pplot_mask )
 s = psbb.cspad.calib( psbb.evt ).shape
 datasum =  np.zeros( (s[0], s[1], s[2], 2 ))
 pplotsum = np.zeros( (nq,nth,2) )
+pplot_mean_sum = np.zeros( (nq,nth,2) )
 corrqqsum = np.zeros( (nq,nth,2) )
 nprocessed = np.zeros( 2 )
 if atp.args.randomXcorr == True:
@@ -138,9 +140,11 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
     else:
         img = psbb.cspad.image(evt,data*mask)
 
+    pplot_mean = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=False )
     pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
     corrqq = ac.polarplot_angular_correlation( pplot )      
     
+    pplot_mean_sum[:,:,m] += pplot_mean
     pplotsum[:,:,m] += pplot
     corrqqsum[:,:,m] += corrqq
 
@@ -197,10 +201,14 @@ f.close()
 # save some output
 #
 lim = atp.args.pcrange
-at.io.saveImage( atp.args, corrqqsum[lim[0]:lim[1],lim[2]:lim[3],0], "even_frame_angular_correlation", prog=atp.parser.prog )   
-at.io.saveImage( atp.args, corrqqsum[lim[0]:lim[1],lim[2]:lim[3],1], "odd_frame_angular_correlation", prog=atp.parser.prog )   
-at.io.saveImage( atp.args, np.sum(corrqqsum[lim[0]:lim[1],lim[2]:lim[3],:],2), "total_angular_correlation", prog=atp.parser.prog )   
-at.io.saveImage( atp.args, corrqq_mask[lim[0]:lim[1],lim[2]:lim[3]], "mask_angular_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, corrqqsum[:,:,0], "even_frame_angular_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, corrqqsum[:,:,1], "odd_frame_angular_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, np.sum(corrqqsum,2), "total_angular_correlation", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, corrqq_mask[:,:], "mask_angular_correlation", prog=atp.parser.prog )   
+#at.io.saveImage( atp.args, corrqqsum[lim[0]:lim[1],lim[2]:lim[3],0], "even_frame_angular_correlation", prog=atp.parser.prog )   
+#at.io.saveImage( atp.args, corrqqsum[lim[0]:lim[1],lim[2]:lim[3],1], "odd_frame_angular_correlation", prog=atp.parser.prog )   
+#at.io.saveImage( atp.args, np.sum(corrqqsum[lim[0]:lim[1],lim[2]:lim[3],:],2), "total_angular_correlation", prog=atp.parser.prog )   
+#at.io.saveImage( atp.args, corrqq_mask[lim[0]:lim[1],lim[2]:lim[3]], "mask_angular_correlation", prog=atp.parser.prog )   
 img = psbb.cspad.image(evt,datasum[:,:,:,0])
 at.io.saveImage( atp.args, img, "datasum_even", prog=atp.parser.prog )   
 
@@ -209,4 +217,6 @@ at.io.saveImage( atp.args, img, "datasum_odd", prog=atp.parser.prog )
 
 at.io.saveImage( atp.args, pplotsum[:,:,0], "polarplotsum_even", prog=atp.parser.prog )   
 at.io.saveImage( atp.args, pplotsum[:,:,1], "polarplotsum_odd", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, pplot_mean_sum[:,:,0], "polarplot_mean_sum_even", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, pplot_mean_sum[:,:,1], "polarplot_mean_sum_odd", prog=atp.parser.prog )   
 
