@@ -90,5 +90,5 @@ else:
 #    at.io.write_dbin( outname, output )
 #elif atp.args.outputext == "h5":
 #    at.io.h5write( outname, output, field="/datasum" )
-
-at.io.saveImage( atp.args, output, "datasum", prog=at.parser.prog )   
+print output.shape
+at.io.saveImage( atp.args, output, "datasum", prog=atp.parser.prog )   
