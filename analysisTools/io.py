@@ -16,6 +16,8 @@ import os
 import array
 import struct
 import h5py
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 #
@@ -85,17 +87,19 @@ def h5write(filename,data,field="data/data"):
      dset = f.create_dataset(field, data=data)
      f.close()
 
-def saveImage( args, array, tail, ext=None, prog=None, h5field="/image" ):
+def saveImage( args, array, tail, ext=None, prog=None, h5field="/image", outname="None" ):
 
-    #set file name
-    outname = args.outpath
     if ext == None:
         ext = args.outputext
+
+    if outname == "None":
+        #set file name
+        outname = args.outpath
     
-    if prog != None:
-        outname += prog[:-3]+"_"
+        if prog != None:
+            outname += prog[:-3]+"_"
     
-    outname += args.exp+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."+ext
+        outname += args.exp+"_"+args.tag+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."+ext
 
     if ext == "dbin":
         write_dbin( outname, array )
@@ -111,10 +115,48 @@ def saveImage( args, array, tail, ext=None, prog=None, h5field="/image" ):
 
     print "Saved image :", outname
 
+def saveImshow( args, array, tail, ext=None, prog=None, h5field="/image", outname="None",
+                cmin=0.0, cmax=0.0):
+
+    if (cmin==0.0) and (cmax==0.0):
+        cmin, cmax = np.min(array), np.max(array)
+
+    if ext == None:
+        ext = args.outputext
+
+    if outname == "None":
+        #set file name
+        outname = args.outpath
+    
+        if prog != None:
+            outname += prog[:-3]+"_"
+    
+        outname += args.exp+"_"+args.tag+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."+ext
+
+    if ext == "dbin":
+        write_dbin( outname, array )
+    elif ext == "h5":
+        h5write( outname, array, field=h5field )
+    else:
+        plt.figure()
+        plt.imshow( array )
+        plt.clim( [cmin,cmax] )
+        plt.colorbar()
+        plt.draw()
+        plt.savefig( outname )
+    #    try:
+        #plt.imsave( outname, array)
+    #    except:
+      #      print "error: cxiLT14py; analysisTools.io.saveImage"
+    #        print "Either unknown extension:", args.outputext
+    #        print "OR unknown location :", outname
+
+    print "Saved image :", outname
+
 def formatted_filename( args, tail, ext, prog=None ):
 
     outname = args.outpath
     if prog != None:
         outname += prog[:-3]+"_"
-    outname += args.exp+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."+ext
+    outname += args.exp+"_"+args.tag+"_"+args.run+"_nstart_"+str(args.nstart)+"_nframes_"+str(args.nframes)+"_"+tail+"."+ext
     return outname
