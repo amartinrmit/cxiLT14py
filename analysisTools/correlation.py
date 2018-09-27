@@ -27,7 +27,7 @@ class angular_correlation:
         newx = rarr*np.cos( tharr ) + cenx
         newy = rarr*np.sin( tharr ) + ceny
         
-        newdata = sdn.map_coordinates( data, [newx.flatten(), newy.flatten()], order=3 )
+        newdata = sdn.map_coordinates( data, [newx.flatten(), newy.flatten()], order=1 )
 
         out = newdata.reshape( nr, nth )
         if submean == True:
@@ -127,7 +127,7 @@ class angular_correlation:
         # then turn that into guassian function
         # then call convoluation function
 
-    def process_asiccorrsum( self, corr, datasum, maskasic, n):
+    def process_asiccorrsum(self, corr, datasum, maskasic, n):
 
         # divide by number of processed frames
         c = corr / float(n)

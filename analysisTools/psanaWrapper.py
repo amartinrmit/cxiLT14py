@@ -41,7 +41,6 @@ class psanaBlackBox:
         self.loadCspad()
         self.wavelength = self.get_wavelength( self.evt )
         self.energy = self.get_photon_beam_energy( self.evt )
-        self.dz = self.get_detector_z( self.evt )
 
     def loadCspad( self, cspadsrc='CxiDs2.0:Cspad.0'):
         #
