@@ -29,7 +29,7 @@ x, y, z = x/109.91974263, y/109.91974263, z/109.91974263
 
 
 rad_avs = []
-
+rs = None
 for i, t in enumerate( psbb.times, atp.args.nstart ):
     if i>=(atp.args.nframes+atp.args.nstart):
         break
@@ -40,7 +40,8 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 
     image = psbb.cspad.calib(evt)
     
-    rad_avs.append(at.radial_profile.make_radial_profile(image, x, y, mask))
+    rad_av, rs = at.radial_profile.make_radial_profile(image, x, y, mask, rs)
+    rad_avs.append(rad_av)
     
 
 rad_avs = np.array(rad_avs)
