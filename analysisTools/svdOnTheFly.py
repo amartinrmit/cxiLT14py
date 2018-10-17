@@ -1,6 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import h5py
 
 
 class SVDthin:
@@ -13,18 +14,27 @@ class SVDthin:
         self.rank_current = 0
         self.ulist = []
 
-    def calc_coeffs( self, data ):
-        
+    def calc_coeffs( self, data, smax=-1, nstart=0 ):
+        if smax==-1:
+            smax = len(self.ulist))
+
         c = []
-        for i in np.arange(len(self.ulist) ):
+        for i in np.arange(smax-nstart)+nstart:
             c.append( np.sum(self.ulist[i]*data) )
         return c
 
-    def project_coefficients( self, c ):
+    def project_coefficients( self, c, smax=-1, nstart=0 ):
+        if smax == -1:
+            smax = len(self.ulist)
 
         output = c[0]*self.ulist[0]
-        for i in np.arange(len(self.ulist)-1)+1:
+        for i in np.arange(smax-1-nstart)+1+nstart:
             output += c[i]*self.ulist[i]
+        return output
+
+    def project_data( self, data, smax=-1, nstart=0):
+        c = self.calc_coeffs( data, smax, nastart)
+        output = self.project_coefficients( self, c, smax, nstart )
         return output
 
     def update_eigenvalues( self, s ):
@@ -111,3 +121,49 @@ class SVDthin:
             self.update_rank()
             
             self.ndata += 1
+
+    #
+    # reads data from a h5 file
+    #
+    def h5read_svdmodes( filename ):
+        h5file = h5py.File(filename,"r")
+        # print field
+        
+        # get rank
+        field = "/parameters/"+"rank"
+        self.current_rank = h5file[field][...]        
+
+        # get eigenvalues
+        field = "/singular_values"
+        sv = h5file[field][...]        
+        self.update_eigenvalues( s )
+        
+        # get svd modes
+        self.ulist = []
+        for i in np.arange( self.current_rank):
+            field = "/svdmodes/mode"+str(i)
+            self.ulist.append( h5file[field][...]  )
+
+        h5file.close()
+
+    #
+    # writes an array into a h5 file
+    #
+    def h5write_svdmodes(filename):
+        f = h5py.File(filename, 'w')    # overwrite any existing file
+
+        # store rank
+        field = "/parameters/"+"rank"
+        f.create_dataset(field, data=self.rank_current)
+
+        # store eigenvalues
+        field = "/singular_values"
+        f.create_dataset(field, data=np.array(self.slist) )
+
+        # store svd modes
+        dset = f.create_dataset(field, data=data)
+        for i, data in enumerate(ulist):
+            field = "/svdmodes/mode"+str(i)
+            dset = f.create_dataset(field, data=data)
+
+        f.close()

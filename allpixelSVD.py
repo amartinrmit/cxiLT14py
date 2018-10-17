@@ -173,6 +173,12 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 print "even frames singular values:", svdt.slist
 print "oddframes singular values:",   svdt2.slist
 
+outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_evenframe_svdmodes.h5"
+svdt.h5write_svdmodes(outname)
+
+outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_oddframe_svdmodes.h5"
+svdt2.h5write_svdmodes(outname)
+
 
 s = pplot.shape
 # first mode
@@ -193,6 +199,14 @@ for ii in np.arange( atp.args.rankmax):
 exit()
 
 
+
+#
+#
+#
+# OOOOOOOOLLLLLLLLLLLLLLLLLDDDDDDDDD
+#
+#
+#
 
 
 outname = at.io.formatted_filename( atp.args, "sing_vals", "txt", prog=atp.parser.prog )
