@@ -150,7 +150,7 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         data2 *= 1.0/np.average(data2*mask)
 
     datasum[:,:,:,m] += data*mask
-    print "data size", data.size
+    print "data size", data.size, data.shape
     
     #    if atp.args.diffCorr == True:
     #        diff = (data - data2)*mask
@@ -159,7 +159,7 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
     #        d = psbb.asic_intensity( data*mask ) /maskasic   #normalizes by number of pixels in an asic
 
     img = psbb.cspad.image(evt,data*mask)
-    print cenx, img.shape[0]
+    print cenx, img.shape, cenx+img.shape[0]/2, ceny+img.shape[1]/2
     pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
 
     if m==0:
