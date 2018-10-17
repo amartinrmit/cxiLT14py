@@ -37,6 +37,11 @@ atp.parser.add_argument( "--nq", help="number of radial (q) polar bins ", type=i
 atp.parser.add_argument( "--nth", help="number of angular polar bins ", type=int)
 atp.parser.add_argument( "--minI", help="minimum total integrated intensity ", type=float, default=1e5)
 
+atp.parser.add_argument( "--svdfile", help="a h5 file with mode information." )
+atp.parser.add_argument( "--svd_nsub", help="number of modes to subtract (project out). Default value 0", type=int, default=0)
+atp.parser.add_argument( "--rankmax", help="maximum rank of svd calculation", type=int, default=20 )
+
+
 #atp.parser.add_argument( "--cenx", help="beam centre in pixels from middle of assembled array : xcoord ", type=int)
 #atp.parser.add_argument( "--ceny", help="beam centre in pixels from middle of assembled array : ycoord ", type=int)
 
@@ -64,6 +69,9 @@ nq, nth = atp.args.nq, atp.args.nth
 qmin, qmax, thmin, thmax = atp.args.polarRange[0], atp.args.polarRange[1], atp.args.polarRange[2], atp.args.polarRange[3]
 cenx, ceny = atp.args.cenx, atp.args.ceny
 
+# read svd information if required
+svdt = at.svdOnTheFly.SVDthin( atp.args.rankmax)
+svdt.h5read_svdmodes( atp.args.svdfile )
 
 #
 # retrieve mask and calculate its angular correlation
@@ -142,6 +150,11 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 
     pplot_mean = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=False )
     pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+
+    if atp.args.svd_nsub > 0:
+        pplot_svd_corrected = svdt.project_data( data, smax=atp.args.svd_nsub)
+        pplot += -pplot_svd_corrected
+
     corrqq = ac.polarplot_angular_correlation( pplot )      
     
     pplot_mean_sum[:,:,m] += pplot_mean
