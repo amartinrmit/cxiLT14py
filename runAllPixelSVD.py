@@ -22,12 +22,12 @@ params = {}
 # common parameters (all parameter values are given as strings)
 #params["--outpath"] = "/reg/neh/home/amartin/2018/cxi10016/results/run7/"
 #params["--exp"] = 'cxip10016'
-params["--outpath"] = "/reg/d/psdm/cxi/cxilt1417/scratch/amartin/results/run40/polarsvd/"
-params["--tag"] = 'polarsvd'
+params["--outpath"] = "/reg/d/psdm/cxi/cxilt1417/scratch/amartin/results/run40/polarsvd_newcen/"
+params["--tag"] = 'polarsvd_newcen'
 params["--exp"] = 'cxilt1417'
 params["--run"] = '40'
 params["--nstart"] = '2000'
-params["--nframes"] = '40000'
+params["--nframes"] = '10000'
 params["--verbose"] = '1'
 #params["--rebinx"] = '1'
 #params["--rebiny"] = '1'
@@ -44,8 +44,8 @@ params["--rankmax"] = "30"
 params["--nq"] = "50"
 params["--nth"] = "50"
 params["--polarRange"] = "0 850 0 6.283185"
-params["--cenx"] = "0"
-params["--ceny"] = "0"
+params["--cenx"] = "-6"
+params["--ceny"] = "12"
 
 
 # generate the command line string from the dictionary of arguments
