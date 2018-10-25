@@ -54,6 +54,9 @@ class psanaBlackBox:
         self.ndim  = self.cspad.ndim(par=0)
         self.instrument = self.cspad.instrument()
 
+    def loadPressureDet( self, src='CXI:LC20:SDS:Pressure'):
+        self.press = psana.Detector( src,self.env_idx )
+
     def get_wavelength( self, evt, src='SIOC:SYS0:ML00:AO192'):
         wldet = psana.Detector( src, self.env_idx)
         return wldet(evt)
@@ -80,6 +83,14 @@ class psanaBlackBox:
     def get_pulse_energy( self, evt, src='SIOC:SYS0:ML00:AO569' ):
         pl = psana.Detector( src, self.env_idx )
         return pl(evt)
+
+    def get_pressure( self, evt ):
+        pval = self.press(evt)
+        if pval == None:
+            output = 0.0
+        else:
+            output = pval
+        return output
 
     def qarrays( self, evt, cx=0.0, cy=0.0 ):
         
