@@ -83,6 +83,16 @@ svdt2 = at.svdOnTheFly.SVDthin(atp.args.rankmax)
 mask = psbb.cspad.mask( psbb.run.event( psbb.times[0]), calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
 # calculate mask intensity per asic
 maskasic = psbb.asic_intensity( mask )
+#assembled image of mask
+imgmsk =  psbb.cspad.image(psbb.evt,mask)
+ione = np.where( imgmsk < 1.0 )
+imgmsk[ione] = 0.0
+# polar plot of mask
+pplot_mask = ac.polar_plot( imgmsk, nq, nth, qmin, qmax, thmin, thmax, cenx+imgmsk.shape[0]/2, ceny+imgmsk.shape[1]/2, submean=True )
+ineg = np.where( pplot_mask < 0.0 )
+pplot_mask[ineg] = 0.0
+pplot_maskones = pplot_mask*0.0 + 1.0
+pplot_maskones[ineg] = 0.0
 
 
 
@@ -132,7 +142,7 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
     avIperpixel2 = (data2*mask).mean()
     if atp.args.verbose >0:
         print "total intensity :", totalI, totalI2, atp.args.minI
-        print "pixel average :", (data*mask).mean(), (data2*mask).mean()
+        #print "pixel average :", (data*mask).mean(), (data2*mask).mean()
 
     if atp.args.useMinI ==True:
         if (totalI < atp.args.minI) or (totalI2 < atp.args.minI):
@@ -150,7 +160,7 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         data2 *= 1.0/np.average(data2*mask)
 
     datasum[:,:,:,m] += data*mask
-    print "data size", data.size, data.shape
+    #print "data size", data.size, data.shape
     
     #    if atp.args.diffCorr == True:
     #        diff = (data - data2)*mask
@@ -159,8 +169,9 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
     #        d = psbb.asic_intensity( data*mask ) /maskasic   #normalizes by number of pixels in an asic
 
     img = psbb.cspad.image(evt,data*mask)
-    print cenx, img.shape, cenx+img.shape[0]/2, ceny+img.shape[1]/2
+    #print cenx, img.shape, cenx+img.shape[0]/2, ceny+img.shape[1]/2
     pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+    pplot *= pplot_maskones
 
     if m==0:
 #        svdt.add_column( (data*mask).flatten() )
@@ -173,10 +184,10 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 print "even frames singular values:", svdt.slist
 print "oddframes singular values:",   svdt2.slist
 
-outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_evenframe_svdmodes.h5"
+outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_"+str(atp.args.nstart)+"_"+str(atp.args.nframes)+"_evenframe_svdmodes.h5"
 svdt.h5write_svdmodes(outname)
 
-outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_oddframe_svdmodes.h5"
+outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_"+str(atp.args.nstart)+"_"+str(atp.args.nframes)+"_oddframe_svdmodes.h5"
 svdt2.h5write_svdmodes(outname)
 
 
@@ -185,14 +196,14 @@ s = pplot.shape
 for ii in np.arange( atp.args.rankmax):
     mode = svdt.ulist[ii].reshape( s )
     output = psbb.cspad.image( evt, mode )
-    print output.shape
+    #print output.shape
     outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_."+atp.args.outputext
     at.io.saveImage( atp.args, output, "evenframe_mode"+str(ii), prog=atp.parser.prog )   
 
     #ii = 1
     mode = svdt2.ulist[ii].reshape( s )
     output = psbb.cspad.image( evt, mode )
-    print output.shape
+    #print output.shape
     outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.exp+"_"+atp.args.run+"_."+atp.args.outputext
     at.io.saveImage( atp.args, output, "oddframe_mode"+str(ii), prog=atp.parser.prog )   
     
