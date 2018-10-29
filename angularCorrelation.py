@@ -38,7 +38,7 @@ atp.parser.add_argument( "--nth", help="number of angular polar bins ", type=int
 atp.parser.add_argument( "--minI", help="minimum total integrated intensity ", type=float, default=1e5)
 
 atp.parser.add_argument( "--svdfile", help="a h5 file with mode information." )
-atp.parser.add_argument( "--svd_nsub", help="number of modes to subtract (project out). Default value 0", type=int, default=0)
+atp.parser.add_argument( "--svdnsub", help="number of modes to subtract (project out). Default value 0", type=int, default=0)
 atp.parser.add_argument( "--rankmax", help="maximum rank of svd calculation", type=int, default=20 )
 
 
@@ -71,7 +71,7 @@ cenx, ceny = atp.args.cenx, atp.args.ceny
 
 # read svd information if required
 svdt = at.svdOnTheFly.SVDthin( atp.args.rankmax)
-svdt.h5read_svdmodes( atp.args.svdfile )
+svdt.h5read_svdmodes( atp.args.svdfile, (nq,nth) )
 
 #
 # retrieve mask and calculate its angular correlation
@@ -85,6 +85,8 @@ imgmsk[ione] = 0.0
 pplot_mask = ac.polar_plot( imgmsk, nq, nth, qmin, qmax, thmin, thmax, cenx+imgmsk.shape[0]/2, ceny+imgmsk.shape[1]/2, submean=True )
 ineg = np.where( pplot_mask < 0.0 )
 pplot_mask[ineg] = 0.0
+pplot_maskones = pplot_mask*0.0 + 1.0
+pplot_maskones[ineg] = 0.0
 #angular correlation of mask
 corrqq_mask = ac.polarplot_angular_correlation( pplot_mask )
 
@@ -96,7 +98,9 @@ s = psbb.cspad.calib( psbb.evt ).shape
 datasum =  np.zeros( (s[0], s[1], s[2], 2 ))
 pplotsum = np.zeros( (nq,nth,2) )
 pplot_mean_sum = np.zeros( (nq,nth,2) )
+pplotsvdsub = np.zeros( (nq,nth,atp.args.svdnsub,2) )
 corrqqsum = np.zeros( (nq,nth,2) )
+corrqqsum_svdsub = np.zeros( (nq,nth,atp.args.svdnsub,2) )
 nprocessed = np.zeros( 2 )
 if atp.args.randomXcorr == True:
     corrqqsumX = np.zeros( (nq,nth,2) )
@@ -112,8 +116,9 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         print "Processing event ", i
     evt = psbb.run.event(t)
 
-#    j = np.int( np.random.rand()*len(psbb.times) ) 
-    j = np.int( np.random.rand()*atp.args.nframes ) + atp.args.nstart
+    r = np.int( np.random.rand()*atp.args.nframes/2 )
+    j = (2*r+m) + atp.args.nstart
+    print "m, j", m, j
     evtj = psbb.run.event(psbb.times[j])
 
     # sum the data
@@ -150,12 +155,22 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 
     pplot_mean = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=False )
     pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+    pplotcopy = np.copy( pplot)
 
-    if atp.args.svd_nsub > 0:
-        pplot_svd_corrected = svdt.project_data( data, smax=atp.args.svd_nsub)
+    if atp.args.svdnsub > 0:
+        print "subtracting modes:", atp.args.svdnsub
+        pplot_svd_corrected = svdt.project_data( pplot, smax=atp.args.svdnsub, nstart=0)
         pplot += -pplot_svd_corrected
 
-    corrqq = ac.polarplot_angular_correlation( pplot )      
+    if atp.args.svdnsub > 0:
+        print "subtracting modes:", atp.args.svdnsub
+        for i in np.arange(atp.args.svdnsub):
+            pplot_svd_corrected = svdt.project_data( pplotcopy, smax=1, nstart=i)
+            pplotcopy += -pplot_svd_corrected
+            pplotsvdsub[:,:,i,m] = np.copy(pplotcopy)
+            corrqqsum_svdsub[:,:,i,m] += ac.polarplot_angular_correlation( pplotsvdsub[:,:,i,m] * pplot_maskones )
+
+    corrqq = ac.polarplot_angular_correlation( pplot * pplot_maskones )      
     
     pplot_mean_sum[:,:,m] += pplot_mean
     pplotsum[:,:,m] += pplot
@@ -174,6 +189,12 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 corrqqsum[:,:,0] *= 1.0/float(nprocessed[0])
 corrqqsum[:,:,1] *= 1.0/float(nprocessed[1])
 
+if atp.args.svdnsub > 0:
+    for i in np.arange(atp.args.svdnsub):
+        corrqqsum_svdsub[:,:,i,0] *= 1.0/float(nprocessed[0])
+        corrqqsum_svdsub[:,:,i,1] *= 1.0/float(nprocessed[1])
+
+
 print "Number of procesed frames even/odd", nprocessed
 totalIarr = np.array(totalIList)
 print "Min max integrated intensity :", np.min(totalIarr), np.max(totalIarr)
@@ -186,6 +207,11 @@ corrqqsum[:,:,1] = ac.mask_correction( corrqqsum[:,:,1], corrqq_mask )
 if atp.args.randomXcorr == True:
     corrqqsum[:,:,0] = ac.mask_correction( corrqqsumX[:,:,0], corrqq_mask) 
     corrqqsum[:,:,1] = ac.mask_correction( corrqqsumX[:,:,1], corrqq_mask )
+if atp.args.svdnsub > 0:
+    for i in np.arange(atp.args.svdnsub):
+        corrqqsum_svdsub[:,:,i,0] = ac.mask_correction( corrqqsum_svdsub[:,:,i,0], corrqq_mask )
+        corrqqsum_svdsub[:,:,i,1] = ac.mask_correction( corrqqsum_svdsub[:,:,i,1], corrqq_mask )
+
 
 
 #
@@ -207,9 +233,17 @@ for i in np.arange(pca.size):
     f.write( str(pca[i])+" ")
 f.write("\n")
 f.write( "average of q-ring pearson correlations :"+str(pca.mean())+"\n")
+
+f.write("\n")
+f.write( "Num modes subtracted, av q-ring pearson correlation\n" )
+if atp.args.svdnsub > 0:
+    for i in np.arange(atp.args.svdnsub):
+         pca = ac.pearsonCorrelation2D_angular( corrqqsum_svdsub[:,:,i,0], corrqqsum_svdsub[:,:,i,1], lim=atp.args.pcrange )
+         f.write(str(i)+", "+str(pca.mean())+"\n")
+         if atp.args.verbose > 0:
+             print "modes subtracted:", i, ", average of q-ring pearson correlations :", pca.mean()
+
 f.close()
-
-
 #
 # save some output
 #
@@ -232,4 +266,5 @@ at.io.saveImage( atp.args, pplotsum[:,:,0], "polarplotsum_even", prog=atp.parser
 at.io.saveImage( atp.args, pplotsum[:,:,1], "polarplotsum_odd", prog=atp.parser.prog )   
 at.io.saveImage( atp.args, pplot_mean_sum[:,:,0], "polarplot_mean_sum_even", prog=atp.parser.prog )   
 at.io.saveImage( atp.args, pplot_mean_sum[:,:,1], "polarplot_mean_sum_odd", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, pplot_mask, "polarplot_mask", prog=atp.parser.prog )   
 
