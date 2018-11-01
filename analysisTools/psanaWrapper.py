@@ -49,6 +49,7 @@ class psanaBlackBox:
         #
         self.cspad = psana.Detector(cspadsrc, self.env_smd)
         
+        self.pixel_size = 109.91974263e-6
         self.shape = self.cspad.shape(par=0)
         self.size  = self.cspad.size(par=0)
         self.ndim  = self.cspad.ndim(par=0)
