@@ -23,7 +23,7 @@ class psanaBlackBox:
         # Initialize variables 
         #     
         self.dsname_smd = 'exp='+exp+':run='+run+':smd'
-        self.ds_smd = psana.DataSource( self.dsname_smd )
+        self.ds_smd = psana.MPIDataSource( self.dsname_smd )
         self.env_smd = self.ds_smd.env()
         self.evt = self.ds_smd.events().next()
 
