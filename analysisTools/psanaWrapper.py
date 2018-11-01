@@ -66,12 +66,12 @@ class psanaBlackBox:
         phb = psana.Detector( src, self.env_idx )
         return phb(evt)
 
-    def get_detector_z( self, evt, src='CXI:DS1:MMS:06.RBV'):
+    def get_detector_z( self, evt, src='CXI:DS2:MMS:06.RBV', offset = 0.57538):
         try:
             dzp = psana.Detector( src, self.env_idx)
-            dz = dzp(evt)
+            dz = dzp(evt) * 1e-3 + offset
         except:
-            dz = 0.5
+            dz = None
             print "(psanaWrapper.py) No detector distance found."
                 
         return dz
