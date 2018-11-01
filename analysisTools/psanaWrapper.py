@@ -17,8 +17,13 @@ import numpy as np
 
 class psanaBlackBox:
 
-    def __init__(self, exp='cxip10016', run='1' ):  
-
+    def __init__(self, exp='cxip10016', run='1', gain_fnam=None, mask_fnam=None ):  
+        """
+        By default gain = 1 and the mask is obtained from psana.
+        For example:
+           gain_fnam = '/reg/data/ana04/cxi/cxilt1417/scratch/gain/gain_prelim.npy' 
+           mask_fnam = '/reg/data/ana04/cxi/cxilt1417/scratch/masks/better_mask.npy'
+        """
         #
         # Initialize variables 
         #     
@@ -38,12 +43,11 @@ class psanaBlackBox:
         self.nevents = len(self.times)
 
         # load information
-        self.loadCspad()
+        self.loadCspad(gain_fnam=gain_fnam, mask_fnam=mask_fnam)
         self.wavelength = self.get_wavelength( self.evt )
         self.energy = self.get_photon_beam_energy( self.evt )
-        self.dz = self.get_detector_z( self.evt )
-
-    def loadCspad( self, cspadsrc='CxiDs2.0:Cspad.0'):
+    
+    def loadCspad( self, cspadsrc='CxiDs2.0:Cspad.0', gain_fnam=None, mask_fnam=None):
         #
         # get a detector object
         #
@@ -54,23 +58,72 @@ class psanaBlackBox:
         self.size  = self.cspad.size(par=0)
         self.ndim  = self.cspad.ndim(par=0)
         self.instrument = self.cspad.instrument()
+        
+        # load x-y pixel coords and calculate polarisation
+        self.x, self.y, z = self.cspad.coords_xyz(self.evt)
+        self.x *= 1e-6
+        self.y *= 1e-6
+        self.z  = self.get_detector_z(self.evt)
+        self.pol = 1 - self.x**2 / (self.x**2 + self.y**2 + self.z**2)
+        
+        # load gain (such that gain correction: im = data / gain)
+        if gain_fnam is not None :
+            self.gain = np.load(gain_fnam)
+        else :
+            self.gain = 1.
+        
+        # load mask 
+        if mask_fnam is not None :
+            self.mask = np.load(mask_fnam)
+        else :
+            self.mask = self.cspad.mask( evt, calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
 
-    def cspad_calib(self, evt):
+    def cspad_calib(self, evt, common_mode=True, mask=True, gain=True, polarisation=True):
         """
         Return the corrected cspad data for event 'evt'.
         
-        Applies common mode correction using unbonden pixels.
+        Applies calibration to the raw cspad data. This is on top of the 
+        default psana calibration. 
         
         Parameters
         ----------
         evt : psana event object
 
+        common_mode : bool
+            if True then common mode correction using unbonded pixels.
+        
+        mask : bool
+            if True then self.mask is multiplied.
+        
+        gain : bool
+            if True then self.gain is divided.
+        
+        polarisation : bool
+            if True then self.pol is divided.
+        
         Returns
         -------
         cspad_data : numpy array
             Corrected cspad as a numpy array
         """
-        return self.cspad.calib(evt, cmpars=(5, 0, 0, 0))
+        if common_mode :
+            cspad_data = self.cspad.calib(evt, cmpars=(5, 0, 0, 0))
+        else :
+            cspad_data = self.cspad.calib(evt)
+
+        if mask :
+            cspad_data *= self.mask
+
+        if gain :
+            cspad_data /= self.gain
+            
+        if polarisation :
+            cspad_data /= self.pol
+                
+        return cspad_data
+
+    def load_gain(self, fnam = '/reg/data/ana04/cxi/cxilt1417/scratch/gain/gain_prelim.npy'):
+        self.gain = np.load(fnam)
 
     def loadPressureDet( self, src='CXI:LC20:SDS:Pressure'):
         self.press = psana.Detector( src,self.env_idx )

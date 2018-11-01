@@ -41,11 +41,11 @@ class parameters:
         self.parser.add_argument( "--nstart", help="Starting diffraction pattern number",type=int, default=0)
         self.parser.add_argument( "--nframes", "-n", help="Number of diffraction patterns to process",type=int, default=1e8)
         self.parser.add_argument( "--nthreads", help="Number of threads to use",type=int, default=1)
-	self.parser.add_argument( "--verbose", help="more output to screen; 0 - none; >0 some/all", type=int, default=1)
-	self.parser.add_argument( "--logname", help="Name of file to log input parameter", default="parameter_log.txt")
+        self.parser.add_argument( "--verbose", help="more output to screen; 0 - none; >0 some/all", type=int, default=1)
+        self.parser.add_argument( "--logname", help="Name of file to log input parameter", default="parameter_log.txt")
 
-	self.parser.add_argument( "--cenx", help="Centre of the beam. x coordinate", type=int)
-	self.parser.add_argument( "--ceny", help="Centre of the beam. y coordinate", type=int)
+        self.parser.add_argument( "--cenx", help="Centre of the beam. x coordinate", type=int)
+        self.parser.add_argument( "--ceny", help="Centre of the beam. y coordinate", type=int)
         self.parser.add_argument( "--outputfreq", help="Frequency that output is written.", type=int, default=100000)
 
        
