@@ -55,6 +55,23 @@ class psanaBlackBox:
         self.ndim  = self.cspad.ndim(par=0)
         self.instrument = self.cspad.instrument()
 
+    def cspad_calib(self, evt):
+        """
+        Return the corrected cspad data for event 'evt'.
+        
+        Applies common mode correction using unbonden pixels.
+        
+        Parameters
+        ----------
+        evt : psana event object
+
+        Returns
+        -------
+        cspad_data : numpy array
+            Corrected cspad as a numpy array
+        """
+        return self.cspad.calib(evt, cmpars=(5, 0, 0, 0))
+
     def loadPressureDet( self, src='CXI:LC20:SDS:Pressure'):
         self.press = psana.Detector( src,self.env_idx )
 
