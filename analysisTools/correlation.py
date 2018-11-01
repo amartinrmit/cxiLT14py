@@ -35,12 +35,18 @@ class angular_correlation:
 
         return out
 
-    def polar_plot_subtract_rmean( self, pplot ):
-
-        av = np.average( pplot, 1 )
-        out = pplot -np.outer( av, np.ones( pplot.shape[1] ) )
+    def polar_plot_subtract_rmean(self, pplot, pplot_mask = None):
+        
+        if pplot_mask is None :
+            av = np.average(pplot, axis = 1)
+        else :
+            sum_mask = np.sum(pplot_mask, axis=1)
+            m        = sum_mask >= 1.
+            av       = np.zeros((pplot.shape[0],))
+            av[m]    = np.sum(pplot, axis = 1)[m] / sum_mask[m] 
+        
+        out = pplot - np.outer( av, np.ones( pplot.shape[1] ) )
         return out
-
     #
     # performs the angular correlation of each q-shell with itself
     #

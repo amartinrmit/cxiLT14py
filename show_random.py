@@ -21,29 +21,20 @@ psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
 # load the mask
 mask = psbb.cspad.mask( psbb.run.event(psbb.times[0]), calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
 
-# load the x, y coordinates of each pixel
-x, y, z = psbb.cspad.coords_xyz(psbb.run.event( psbb.times[0]))
 
-# convert to pixel units
-x, y, z = x/109.91974263, y/109.91974263, z/109.91974263
-
-
-rad_avs = []
-rs = None
-for i, t in enumerate( psbb.times, atp.args.nstart ):
-    if i>=(atp.args.nframes+atp.args.nstart):
-        break
+imgs = []
+np.random.seed(0)
+#for i, t in enumerate( psbb.times, atp.args.nstart ):
+for i in range(atp.args.nframes):
+    i = np.random.randint(0, len(psbb.times))
 
     if atp.args.verbose >0:
         print "Processing event ", i
-    evt = psbb.run.event(t)
+    evt = psbb.run.event(psbb.times[i])
 
-    image = psbb.cspad.calib(evt)
+    d = mask * psbb.cspad.calib(evt, cmpars=(5, 0, 0, 0))
+    #d = psbb.cspad.calib(evt)
+    imgs.append(psbb.cspad.image(evt, d))
     
-    rad_av, rs = at.radial_profile.make_radial_profile(image, x, y, mask, rs)
-    rad_avs.append(rad_av)
-    
-
-rad_avs = np.array(rad_avs)
-
-#at.io.saveImage( atp.args, rad_avs, "radial_profiles", prog=atp.parser.prog )   
+import pyqtgraph as pg
+pg.show(np.array(imgs))

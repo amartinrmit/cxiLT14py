@@ -42,16 +42,29 @@ class psanaBlackBox:
         self.wavelength = self.get_wavelength( self.evt )
         self.energy = self.get_photon_beam_energy( self.evt )
 
+    def load_gain(self, fnam = '/reg/data/ana04/cxi/cxilt1417/scratch/gain/gain_prelim.npy'):
+        self.gain = np.load(fnam)
+
+    def load_mask(self, fnam = '/reg/data/ana04/cxi/cxilt1417/scratch/masks/better_mask.npy'):
+        if fnam is None :
+            self.mask = self.cspad.mask( evt, calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
+        else :
+            self.mask = np.load(fnam)
+
     def loadCspad( self, cspadsrc='CxiDs2.0:Cspad.0'):
         #
         # get a detector object
         #
         self.cspad = psana.Detector(cspadsrc, self.env_smd)
         
+        self.pixel_size = 109.91974263e-6
         self.shape = self.cspad.shape(par=0)
         self.size  = self.cspad.size(par=0)
         self.ndim  = self.cspad.ndim(par=0)
         self.instrument = self.cspad.instrument()
+        self.x, self.y  = None, None
+        self.mask = None
+        self.gain = None
 
     def get_wavelength( self, evt, src='SIOC:SYS0:ML00:AO192'):
         wldet = psana.Detector( src, self.env_idx)
@@ -62,12 +75,12 @@ class psanaBlackBox:
         phb = psana.Detector( src, self.env_idx )
         return phb(evt)
 
-    def get_detector_z( self, evt, src='CXI:DS1:MMS:06.RBV'):
+    def get_detector_z( self, evt, src='CXI:DS2:MMS:06.RBV', offset = 0.57538):
         try:
             dzp = psana.Detector( src, self.env_idx)
-            dz = dzp(evt)
+            dz = dzp(evt) * 1e-3 + offset
         except:
-            dz = 0.5
+            dz = None
             print "(psanaWrapper.py) No detector distance found."
                 
         return dz
@@ -147,3 +160,54 @@ class psanaBlackBox:
                     for j in np.arange(rebiny):
                         out[asic,i*istep:(i+1)*istep,j*jstep:(j+1)*jstep] = asicI[asic,i,j]
         return out
+
+    def cspad_calib(self, evt, polarisation_correction=True, gain_correction=True):
+        """
+        current recommended calibration pipleline. This is slow if done per event.
+        """
+        #
+        # load the psana calibrated image with unbonded pixel based common mode correction
+        #
+        data = self.cspad.calib(evt, cmpars=(5, 0, 0, 0))
+
+        #
+        # Apply the mask
+        #
+        if self.mask is None :
+            self.load_mask()
+
+        data *= self.mask
+        
+        #
+        # apply polarisation correction 
+        #
+        if polarisation_correction :
+            #
+            # get the pixel positions if not done already
+            #
+            if self.x is None or self.y is None :
+                self.x, self.y, z = self.cspad.coords_xyz(evt)
+                self.x *= 1e-6
+                self.y *= 1e-6
+             
+            z = self.get_detector_z(evt)
+            if z is not None :
+                data = self.polarisation_correction(data, self.x, self.y, z)
+        #
+        # Apply the gain
+        #
+        if gain_correction :
+            if self.gain is None :
+                self.load_gain()
+            data /= self.gain
+        
+        #
+        # count photons
+        # 
+        data = self.cspad.photons(evt, data, self.mask, adu_per_photon=20.25)
+        return data
+
+    def polarisation_correction(self, cspad, x, y, z):
+        pol = 1 - x**2 / (x**2 + y**2 + z**2)
+        return cspad / pol
+
