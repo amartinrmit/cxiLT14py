@@ -6,3 +6,4 @@ import correlation
 import powder
 import centreDiffraction
 import svdOnTheFly
+import radial_profile
