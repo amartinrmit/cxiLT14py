@@ -42,6 +42,8 @@ atp.write_all_params_to_file( script=atp.parser.prog )
 print atp.args.exp, atp.args.run
 psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
 
+print "number of events in run:", psbb.nevents
+exit()
 
 #
 # retrieve mask if required
@@ -59,11 +61,11 @@ outname = atp.args.outpath+atp.parser.prog[:-3]+"_"+atp.args.tag+"_"+atp.args.ex
 f = h5py.File(outname, 'w')    # overwrite any existing file
 
 
-
-for i, t in enumerate( psbb.times, atp.args.nstart ):
-    if i>=(atp.args.nframes+atp.args.nstart):
-        break
-
+for i in np.arange( atp.args.nframes )+ atp.args.nstart :
+#for i, t in enumerate( psbb.times, atp.args.nstart ):
+ #   if i>=(atp.args.nframes+atp.args.nstart):
+ #       break
+    t = psbb.times[i]
 
     if atp.args.verbose >0:
         print "Processing event ", i
@@ -82,13 +84,13 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         #    datasum *= 1.0/float(atp.args.nframes)
         
     if atp.args.applymask == True:
-        datasum *= mask
+        data *= mask
 
 
     if atp.args.assemble == True:
-        output = psbb.cspad.image( evt, datasum)
+        output = psbb.cspad.image( evt, data)
     else:
-        output = datasum
+        output = data
 
     field = "/frames/frame_"+str(i)
     dset = f.create_dataset(field, data=output)

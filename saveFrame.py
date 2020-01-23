@@ -66,6 +66,8 @@ if atp.args.raw == True:
 else:
     data = psbb.cspad.calib( evt )
 
+print "data shape", data.shape
+
 datasum += data
 
 

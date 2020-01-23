@@ -46,6 +46,9 @@ atp.parser.add_argument( "--ibins", help="number of bins in histogram", type=int
 
 atp.parser.add_argument( "--pixelMask", help="a numpy file to specify which pixels to create histogram for ", default="None")
 atp.parser.add_argument( "--pixelMask2", help="a numpy file to specify  pixels correlate against pixels in first pixelMask ", default="None")
+atp.parser.add_argument( "--rebinx", help="rebin data in x by this factor", type=int, default=-1)
+atp.parser.add_argument( "--rebiny", help="rebin data in y by this factor", type=int, default=-1)
+
 
 
 # parse the command line arguments
@@ -77,11 +80,12 @@ if atp.args.applymask == True:
 # load the pixel mask
 #
 if atp.args.pixelMask != "None":
-    ipmask = np.load( atp.args.pixelMask )
+    ipmaskin = np.load( atp.args.pixelMask )
     pflag = True
     #ipmask = np.where( pmask == 1.0 )
-    ipmask = ( ipmask[0], ipmask[1], ipmask[2])
+    ipmask = ( ipmaskin[0], ipmaskin[1], ipmaskin[2])
     npix = ipmask[0].size
+    print npix, ipmaskin.shape
     
     t = psbb.times[10]
     evt = psbb.run.event(t)
@@ -148,6 +152,7 @@ pixelhistsum = np.zeros( (len(plist),  atp.args.hbins) )
 totalIhist = np.zeros( 1000 )
 
 if pflag:
+    print npix,npix2,ibins,atp.args.hbins,atp.args.hbins
     pmhistsum = np.zeros( (npix,npix2,ibins,atp.args.hbins,atp.args.hbins) )
     pmhiststat = np.zeros( (npix,npix2,ibins,atp.args.hbins,atp.args.hbins,2) )
 
@@ -185,12 +190,18 @@ for i in range(atp.args.nframes ):
         dethist, dethist_x = np.histogram( data[j,:,:], bins=atp.args.hbins, range=(atp.args.hmin,atp.args.hmax) )
         det2x1histsum[j,ib,:] += dethist
     
+    print "debug :", atp.args.rebinx, atp.args.rebiny
+    if (atp.args.rebinx>0) and (atp.args.rebiny>0):
+        dataB = psbb.asic_intensity( data, rebinx=atp.args.rebinx, rebiny=atp.args.rebiny )
+    else:
+        dataB = data
+
     if pflag and pflag2:
-        dpix =  data[ipmask]
-        dpix2 =  data[ipmask2]
+        dpix =  dataB[ipmask]
+        dpix2 =  dataB[ipmask2]
         for j in np.arange(npix):
             for k in np.arange(npix2):
-                if j == 5: print "adu pixel 5:",  dpix[j]
+#                if j == 5: print "adu pixel 5:",  dpix[j]
                 index = histindex(dpix[j], atp.args.hmin, atp.args.hmax, atp.args.hbins )
                 index2 = histindex(dpix[k], atp.args.hmin, atp.args.hmax, atp.args.hbins )
                 pmhistsum[j,k,ib,index,index2] += 1

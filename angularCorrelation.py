@@ -26,7 +26,8 @@ atp.parser.add_argument( "--outputext", help="File extention for output image: .
 
 atp.parser.add_argument( "--raw", help="output uncorrected data (true) or all corrections [dark/gain/common mode]", type=bool, default=False)
 
-atp.parser.add_argument( "--normalize", help="normalize the data by the average pixels intensity", type=bool, default=True)
+atp.parser.add_argument( "--normalize", help="normalize the data by the average pixels intensity", type=bool, default=False)
+atp.parser.add_argument( "--intensity_veto", help="skip frames with intensity lower than minI", type=bool, default=False)
 atp.parser.add_argument( "--diffCorr", help="Calculate the correlation of intenisty difference between current frame and a random frame.", type=bool, default=False)
 atp.parser.add_argument( "--randomXcorr", help="Calculate the correlation between current frame and a random frame.", type=bool, default=False)
 
@@ -50,6 +51,8 @@ atp.parser.add_argument( "--rankmax", help="maximum rank of svd calculation", ty
 atp.parse_arguments()
 print "raw", atp.args.raw
 print "diffCorr", atp.args.diffCorr
+print "normalize", atp.args.normalize
+print "intensity_veto", atp.args.intensity_veto
 # write all the input arguments to a log file
 atp.write_all_params_to_file( script=atp.parser.prog )
 
@@ -59,6 +62,11 @@ atp.write_all_params_to_file( script=atp.parser.prog )
 #
 print atp.args.exp, atp.args.run
 psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
+nmax = len(psbb.times)
+if atp.args.nframes > nmax:
+    atp.args.nframes = nmax - ato.args.nstart -1
+print "nmax, atp.args.nframes =", nmax, atp.args.nframes
+
 
 
 # angular correlation struct
@@ -70,8 +78,9 @@ qmin, qmax, thmin, thmax = atp.args.polarRange[0], atp.args.polarRange[1], atp.a
 cenx, ceny = atp.args.cenx, atp.args.ceny
 
 # read svd information if required
-svdt = at.svdOnTheFly.SVDthin( atp.args.rankmax)
-svdt.h5read_svdmodes( atp.args.svdfile, (nq,nth) )
+if atp.args.svdnsub > 0:
+    svdt = at.svdOnTheFly.SVDthin( atp.args.rankmax)
+    svdt.h5read_svdmodes( atp.args.svdfile, (nq,nth) )
 
 #
 # retrieve mask and calculate its angular correlation
@@ -104,9 +113,13 @@ corrqqsum_svdsub = np.zeros( (nq,nth,atp.args.svdnsub,2) )
 nprocessed = np.zeros( 2 )
 if atp.args.randomXcorr == True:
     corrqqsumX = np.zeros( (nq,nth,2) )
+
+norm1, norm2 = 0.0, 0.0
    
 totalIList = []
-for i, t in enumerate( psbb.times, atp.args.nstart ):
+#for i, t in enumerate( psbb.times, atp.args.nstart ):
+for i in np.arange(len(psbb.times)-atp.args.nstart)+atp.args.nstart:
+    t = psbb.times[i]
     if i>=(atp.args.nframes+atp.args.nstart):
         break
 
@@ -117,7 +130,9 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
     evt = psbb.run.event(t)
 
     r = np.int( np.random.rand()*atp.args.nframes/2 )
-    j = (2*r+m) + atp.args.nstart
+    j = (2*r) +m + atp.args.nstart
+    if j >= atp.args.nstart+len(psbb.times):
+        j = atp.args.nstart+len(psbb.times) - 1
     print "m, j", m, j
     evtj = psbb.run.event(psbb.times[j])
 
@@ -129,12 +144,15 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         data = psbb.cspad.calib( evt )
         data2 = psbb.cspad.calib( evtj )
 
+    if (data is None) or (data2 is None):
+        continue
+
     totalI = data.sum()
     totalI2 = data2.sum()
     if atp.args.verbose >0:
         print "total intenisty :", totalI, totalI2
 
-    if (totalI < atp.args.minI) or (totalI2 < atp.args.minI):
+    if ((totalI < atp.args.minI) or (totalI2 < atp.args.minI)) and (atp.args.intensity_veto==True):
         print "Skipping event. Integrated intensity too low"
         continue
     else:
@@ -142,8 +160,11 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         totalIList.append( [totalI, totalI2] )
 
     if atp.args.normalize==True:
+        norm1 += 1.0/np.average(data*mask)
+        norm2 += 1.0/np.average(data2*mask)
         data *= 1.0/np.average(data*mask)
         data2 *= 1.0/np.average(data2*mask)
+
 
     datasum[:,:,:,m] += data*mask
 
@@ -170,7 +191,7 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
             pplotsvdsub[:,:,i,m] = np.copy(pplotcopy)
             corrqqsum_svdsub[:,:,i,m] += ac.polarplot_angular_correlation( pplotsvdsub[:,:,i,m] * pplot_maskones )
 
-    corrqq = ac.polarplot_angular_correlation( pplot * pplot_maskones )      
+    corrqq = ac.polarplot_angular_correlation( pplot_mean * pplot_maskones )      
     
     pplot_mean_sum[:,:,m] += pplot_mean
     pplotsum[:,:,m] += pplot
@@ -188,6 +209,9 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 # divide by number of processed frames
 corrqqsum[:,:,0] *= 1.0/float(nprocessed[0])
 corrqqsum[:,:,1] *= 1.0/float(nprocessed[1])
+norm1 *= 1.0/float(nprocessed[0])
+norm2 *= 1.0/float(nprocessed[1])
+
 
 if atp.args.svdnsub > 0:
     for i in np.arange(atp.args.svdnsub):
@@ -212,6 +236,14 @@ if atp.args.svdnsub > 0:
         corrqqsum_svdsub[:,:,i,0] = ac.mask_correction( corrqqsum_svdsub[:,:,i,0], corrqq_mask )
         corrqqsum_svdsub[:,:,i,1] = ac.mask_correction( corrqqsum_svdsub[:,:,i,1], corrqq_mask )
 
+#
+# output normalization data
+#
+outname = at.io.formatted_filename( atp.args, "intensity_norm", "txt", prog=atp.parser.prog )
+fnorm = open( outname, 'w' )
+fnorm.write( "norm1 :"+str(norm1)+"\n" ) 
+fnorm.write("norm2 :"+str(norm2)+"\n" ) 
+fnorm.close()
 
 
 #

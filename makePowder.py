@@ -79,7 +79,8 @@ pplotsum = np.zeros( atp.args.nqbins )
 pvarsum = np.zeros( atp.args.nqbins )
 pccsum = np.zeros( atp.args.nqbins )
 
-for i, t in enumerate( psbb.times, atp.args.nstart ):
+for i in np.arange(len(psbb.times)-atp.args.nstart)+atp.args.nstart:
+    t = psbb.times[i]
     if i>=(atp.args.nframes+atp.args.nstart):
         break
 

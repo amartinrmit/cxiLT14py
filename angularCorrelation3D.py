@@ -26,7 +26,8 @@ atp.parser.add_argument( "--outputext", help="File extention for output image: .
 
 atp.parser.add_argument( "--raw", help="output uncorrected data (true) or all corrections [dark/gain/common mode]", type=bool, default=False)
 
-atp.parser.add_argument( "--normalize", help="normalize the data by the average pixels intensity", type=bool, default=True)
+atp.parser.add_argument( "--normalize", help="normalize the data by the average pixels intensity", type=bool, default=False)
+atp.parser.add_argument( "--intensity_veto", help="skip frames with intensity lower than minI", type=bool, default=False)
 atp.parser.add_argument( "--diffCorr", help="Calculate the correlation of intenisty difference between current frame and a random frame.", type=bool, default=False)
 atp.parser.add_argument( "--randomXcorr", help="Calculate the correlation between current frame and a random frame.", type=bool, default=False)
 
@@ -54,6 +55,10 @@ atp.write_all_params_to_file( script=atp.parser.prog )
 #
 print atp.args.exp, atp.args.run
 psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
+nmax = len(psbb.times)
+if atp.args.nframes +atp.args.nstart > nmax:
+    atp.args.nframes = nmax - atp.args.nstart -1
+print "nmax, atp.args.nframes =", nmax, atp.args.nstart+atp.args.nframes, atp.args.nframes
 
 
 # angular correlation struct
@@ -92,9 +97,12 @@ corrqqsum = np.zeros( (nq,nq,nth,2) )
 nprocessed = np.zeros( 2 )
 if atp.args.randomXcorr == True:
     corrqqsumX = np.zeros( (nq,nq,nth,2) )
+
+norm1, norm2 = 0.0, 0.0
    
 totalIList = []
-for i, t in enumerate( psbb.times, atp.args.nstart ):
+for i in np.arange( len(psbb.times) - atp.args.nstart)+atp.args.nstart:
+    t = psbb.times[i]
     if i>=(atp.args.nframes+atp.args.nstart):
         break
 
@@ -106,7 +114,11 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
     evt = psbb.run.event(t)
 
 #    j = np.int( np.random.rand()*len(psbb.times) ) 
-    j = np.int( np.random.rand()*atp.args.nframes ) + atp.args.nstart
+#    j = np.int( np.random.rand()*atp.args.nframes ) + atp.args.nstart
+    r = np.int( np.random.rand()*atp.args.nframes/2 )
+    j = (2*r) +m + atp.args.nstart
+    if j >= atp.args.nstart+len(psbb.times):
+        j = atp.args.nstart+len(psbb.times) - 1
     evtj = psbb.run.event(psbb.times[j])
 
     # sum the data
@@ -117,12 +129,15 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         data = psbb.cspad.calib( evt )
         data2 = psbb.cspad.calib( evtj )
 
+    if (data is None) or (data2 is None):
+        continue
+
     totalI = data.sum()
     totalI2 = data2.sum()
     if atp.args.verbose >0:
         print "total intensity :", totalI, totalI2
 
-    if (totalI < atp.args.minI) or (totalI2 < atp.args.minI):
+    if (totalI < atp.args.minI) or (totalI2 < atp.args.minI) and (atp.args.intensity_veto==True):
         print "Skipping event. Integrated intensity too low"
         continue
     else:
@@ -130,6 +145,8 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
         totalIList.append( [totalI, totalI2] )
 
     if atp.args.normalize==True:
+        norm1 += 1.0/np.average(data*mask)
+        norm2 += 1.0/np.average(data2*mask)
         data *= 1.0/np.average(data*mask)
         data2 *= 1.0/np.average(data2*mask)
 
@@ -167,6 +184,9 @@ for i, t in enumerate( psbb.times, atp.args.nstart ):
 # divide by number of processed frames
 corrqqsum[:,:,:,0] *= 1.0/float(nprocessed[0])
 corrqqsum[:,:,:,1] *= 1.0/float(nprocessed[1])
+norm1 *= 1.0/float(nprocessed[0])
+norm2 *= 1.0/float(nprocessed[1])
+
 
 print "Number of procesed frames even/odd", nprocessed
 totalIarr = np.array(totalIList)
@@ -180,6 +200,15 @@ corrqqsum[:,:,:,1] = ac.mask_correction( corrqqsum[:,:,:,1], corrqq_mask )
 if atp.args.randomXcorr == True:
     corrqqsum[:,:,:,0] = ac.mask_correction( corrqqsumX[:,:,:,0], corrqq_mask) 
     corrqqsum[:,:,:,1] = ac.mask_correction( corrqqsumX[:,:,:,1], corrqq_mask )
+
+#
+# output normalization data
+#
+outname = at.io.formatted_filename( atp.args, "intensity_norm", "txt", prog=atp.parser.prog )
+fnorm = open( outname, 'w' )
+fnorm.write( "norm1 :"+str(norm1)+"\n" ) 
+fnorm.write("norm2 :"+str(norm2)+"\n" ) 
+fnorm.close()
 
 
 #
