@@ -82,8 +82,8 @@ def h5read(filename,field="data/data1"):
 #
 # writes an array into a h5 file
 #
-def h5write(filename,data,field="data/data"):
-     f = h5py.File(filename, 'w')    # overwrite any existing file
+def h5write(filename,data,field="data/data",wa='w'):
+     f = h5py.File(filename, wa)    # overwrite any existing file
      dset = f.create_dataset(field, data=data)
      f.close()
 

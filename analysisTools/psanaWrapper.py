@@ -27,11 +27,13 @@ class psanaBlackBox:
         #
         # Initialize variables 
         #     
+        print "Debug: loading psanabb"
         self.dsname_smd = 'exp='+exp+':run='+run+':smd'
         self.ds_smd = psana.MPIDataSource( self.dsname_smd )
         self.env_smd = self.ds_smd.env()
         self.evt = self.ds_smd.events().next()
 
+        print "Debug: loading psanabb idx events"
         self.dsname_idx = 'exp='+exp+':run='+run+':idx'
         self.ds_idx = psana.DataSource( self.dsname_idx )
         self.env_idx = self.ds_idx.env()
@@ -42,6 +44,7 @@ class psanaBlackBox:
         self.times = self.run.times()
         self.nevents = len(self.times)
 
+        print "Debug: loading cspad info"
         # load information
         self.loadCspad(gain_fnam=gain_fnam, mask_fnam=mask_fnam)
         self.wavelength = self.get_wavelength( self.evt )
@@ -76,7 +79,7 @@ class psanaBlackBox:
         if mask_fnam is not None :
             self.mask = np.load(mask_fnam)
         else :
-            self.mask = self.cspad.mask( evt, calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
+            self.mask = self.cspad.mask( self.evt, calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
 
     def cspad_calib(self, evt, common_mode=True, mask=True, gain=True, polarisation=True):
         """
@@ -165,13 +168,14 @@ class psanaBlackBox:
 
     def qarrays( self, evt, cx=0.0, cy=0.0 ):
         
-        dz = self.get_detector_z( evt )
+        dz = self.get_detector_z( evt ) + (0.139-0.567)
         wavelength = self.get_wavelength( evt )
         q0 = 1/wavelength
 
-        qx = self.cspad.coords_x( evt ) * q0 / (self.cspad.coords_z(evt) + dz )
-        qy = self.cspad.coords_y( evt ) * q0 / (self.cspad.coords_z(evt) + dz )
+        qx = self.cspad.coords_x( evt ) * q0 / dz #(self.cspad.coords_z(evt) + dz )
+        qy = self.cspad.coords_y( evt ) * q0 / dz #(self.cspad.coords_z(evt) + dz )
         qz = q0
+        print "debug qx, qy", np.max(self.cspad.coords_x( evt )) , dz, np.max(self.cspad.coords_z(evt)), np.max(qx), q0
 
         qlen = np.sqrt( qx*qx + qy*qy + qz*qz )
         print "debug qarrays() q0 qlen", q0, np.min(qlen), np.max(qlen)
@@ -180,8 +184,10 @@ class psanaBlackBox:
         qy = qy * q0 / qlen
         qz = (qz *q0 / qlen) - q0
         qabs = np.sqrt( qx*qx + qy*qy + qz*qz )
-
-        return [qx, qy, qz, qabs]
+        qangle = np.arctan2( qx, qy )
+        print "debug qarrays() qabs max", np.max(qabs), np.max(qx ), np.max(qy), np.max(qz)
+        
+        return [qx, qy, qz, qabs, qangle]
 
     #
     # convolve an assembled image. Account for mask

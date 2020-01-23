@@ -215,7 +215,6 @@ class powder:
                 self.qthsamps[i,j,1] = dth
                 #            iq = np.logical_and( (qarr>dq), qarr<dq+qstep )
                 self.iqth.append( np.where( (qarr>dq) * (qarr<dq+self.qstep) * (tharr>dth)*(tharr<dth+self.thstep ) ))
-
     #
     # otf - " one the fly".
     #
@@ -246,7 +245,7 @@ class powder:
         #
         for i in np.arange(nqbins):
             for j in np.arange(nthbins):
-                iqth = self.iqth[i,j]
+                iqth = self.iqth[i*nqbins+j]
 
                 pplot[i,j] = dtmp[ iqth].sum()
                 norm = mask[iqth].sum()
