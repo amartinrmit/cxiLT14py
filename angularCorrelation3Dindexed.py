@@ -63,7 +63,10 @@ psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
 # read file with list indices
 #
 if atp.args.indexfile != "None":
-    ind = tuple(np.load(atp.args.indexfile))
+    tmp = np.load(atp.args.indexfile)
+    print "loaded indices shape", tmp.shape
+    ind = np.load(atp.args.indexfile)[0,:]
+    print "loaded indices shape", ind
 else:
     ind = np.arange(len(psbb.times))
 
@@ -218,8 +221,10 @@ if atp.args.randomXcorr == True:
 #
 outname = at.io.formatted_filename( atp.args, "intensity_norm", "txt", prog=atp.parser.prog )
 fnorm = open( outname, 'w' )
-fnorm.write( "norm1 :"+str(norm1)+"\n" ) 
-fnorm.write("norm2 :"+str(norm2)+"\n" ) 
+fnorm.write( "norm1 even :"+str(norm1)+"\n" ) 
+fnorm.write("norm2 odd :"+str(norm2)+"\n" ) 
+fnorm.write( "nprocessed even :"+str(nprocessed[0])+"\n" ) 
+fnorm.write("nprocessed odd :"+str(nprocessed[1])+"\n" ) 
 fnorm.close()
 
 

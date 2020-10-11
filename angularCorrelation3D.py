@@ -206,8 +206,10 @@ if atp.args.randomXcorr == True:
 #
 outname = at.io.formatted_filename( atp.args, "intensity_norm", "txt", prog=atp.parser.prog )
 fnorm = open( outname, 'w' )
-fnorm.write( "norm1 :"+str(norm1)+"\n" ) 
-fnorm.write("norm2 :"+str(norm2)+"\n" ) 
+fnorm.write( "norm1 even :"+str(norm1)+"\n" ) 
+fnorm.write("norm2 odd :"+str(norm2)+"\n" ) 
+fnorm.write( "nprocessed even :"+str(nprocessed[0])+"\n" ) 
+fnorm.write("nprocessed odd :"+str(nprocessed[1])+"\n" ) 
 fnorm.close()
 
 
