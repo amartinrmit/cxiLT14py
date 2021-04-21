@@ -35,6 +35,38 @@ class angular_correlation:
 
         return out
 
+
+    def polar_plot_with_qbins( self,data, qbins, nth, thmin, thmax, cenx, ceny, submean=False ):
+
+        nr = qbins.size
+
+        # r and theta arrays
+        rarr = np.outer( qbins, np.ones(nth) )
+        tharr = np.outer( np.ones(nr), np.arange(nth)*(thmax-thmin)/float(nth) + thmin)
+        
+        newx = rarr*np.cos( tharr ) + cenx
+        newy = rarr*np.sin( tharr ) + ceny
+        
+        newdata = sdn.map_coordinates( data, [newx.flatten(), newy.flatten()], order=3 )
+
+        out = newdata.reshape( nr, nth )
+        if submean == True:
+            out = self.polar_plot_subtract_rmean( out  )
+
+        return out
+
+
+    def qbins( self, nq, dz, wl, pw ):
+
+        qmax = (2/wl)*np.sin( np.arctan(nq*pw/dz)/2.0 )
+
+        qind = np.arange(nq)*qmax/float(nq)
+
+        qpix = (dz/pw)*np.tan(2.0 * np.arcsin( qind*(wl/2.0) ))
+
+        return floor(qpix)
+
+
     def polar_plot_subtract_rmean( self, pplot ):
 
         av = np.average( pplot, 1 )

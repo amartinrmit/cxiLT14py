@@ -37,6 +37,8 @@ atp.parser.add_argument( "--polarRange", nargs=4, help="pixel range to evaluate 
 atp.parser.add_argument( "--nq", help="number of radial (q) polar bins ", type=int)
 atp.parser.add_argument( "--nth", help="number of angular polar bins ", type=int)
 atp.parser.add_argument( "--minI", help="minimum total integrated intensity ", type=float, default=1e5)
+atp.parser.add_argument( "--dz", help="detector distance in (m)", type=float, default=-1)
+atp.parser.add_argument( "--wavelength", help="wavelength in (m)", type=float, default=-1)
 
 #atp.parser.add_argument( "--cenx", help="beam centre in pixels from middle of assembled array : xcoord ", type=int)
 #atp.parser.add_argument( "--ceny", help="beam centre in pixels from middle of assembled array : ycoord ", type=int)
@@ -71,6 +73,13 @@ cenx, ceny = atp.args.cenx, atp.args.ceny
 
 
 #
+# set up qarrays
+#
+pixel_width = 109.8e-6
+qbins = at.correlation.qbins( nq, atp.args.dz, atp.args.wl, pixel_width) 
+
+
+#
 # retrieve mask and calculate its angular correlation
 #
 mask = psbb.cspad.mask( psbb.run.event( psbb.times[0]), calib=True, status=True, edges=True, central=True, unbondnbrs8=True)
@@ -79,7 +88,8 @@ imgmsk =  psbb.cspad.image(psbb.evt,mask)
 ione = np.where( imgmsk < 1.0 )
 imgmsk[ione] = 0.0
 # polar plot of mask
-pplot_mask = ac.polar_plot( imgmsk, nq, nth, qmin, qmax, thmin, thmax, cenx+imgmsk.shape[0]/2, ceny+imgmsk.shape[1]/2, submean=True )
+#pplot_mask = ac.polar_plot( imgmsk, nq, nth, qmin, qmax, thmin, thmax, cenx+imgmsk.shape[0]/2, ceny+imgmsk.shape[1]/2, submean=True )
+pplot_mask = ac.polar_plot_with_qbins( imgmsk, qbins,  nth, thmin, thmax, cenx+imgmsk.shape[0]/2, ceny+imgmsk.shape[1]/2, submean=True )
 ineg = np.where( pplot_mask < 0.0 )
 pplot_mask[ineg] = 0.0
 #angular correlation of mask
@@ -158,8 +168,10 @@ for i in np.arange( len(psbb.times) - atp.args.nstart)+atp.args.nstart:
     else:
         img = psbb.cspad.image(evt,data*mask)
 
-    pplot_mean = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=False )
-    pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+##    pplot_mean = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=False )
+##    pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+    pplot_mean = ac.polar_plot_with_qbins( img, qbins,  nth, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=False )
+    pplot = ac.polar_plot_with_qbins( img, qbins,  nth, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
 
     start2 = time.clock()
     corrqq = ac.polarplot_angular_intershell_correlation( pplot )      
@@ -173,8 +185,10 @@ for i in np.arange( len(psbb.times) - atp.args.nstart)+atp.args.nstart:
     if atp.args.randomXcorr == True:
         img = psbb.cspad.image(evt,data*mask)
         img2 = psbb.cspad.image(evt,data2*mask)
-        pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
-        pplot2 = ac.polar_plot( img2, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+        #pplot = ac.polar_plot( img, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+        #pplot2 = ac.polar_plot( img2, nq, nth, qmin, qmax, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+        pplot = ac.polar_plot_with_qbins( img, qbins,  nth, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
+        pplot2 = ac.polar_plot_with_qbins( img2, qbins,  nth, thmin, thmax, cenx+img.shape[0]/2, ceny+img.shape[1]/2, submean=True )
         corrqq = ac.polarplot_angular_intershell_correlation( pplot, pplot2 )      
         corrqqsumX[:,:,:,m] += corrqq
 
