@@ -90,7 +90,7 @@ cenx, ceny = atp.args.cenx, atp.args.ceny
 # set up qarrays
 #
 pixel_width = 109.8e-6
-qbins = at.correlation.qbins( nq, atp.args.dz, atp.args.wl, pixel_width) 
+qbins = ac.qbins( nq, atp.args.dz, atp.args.wl, pixel_width) 
 
 
 
