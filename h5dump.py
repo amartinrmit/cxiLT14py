@@ -43,7 +43,7 @@ print atp.args.exp, atp.args.run
 psbb = at.psanaWrapper.psanaBlackBox( exp=atp.args.exp, run=atp.args.run )
 
 print "number of events in run:", psbb.nevents
-exit()
+#exit()
 
 #
 # retrieve mask if required

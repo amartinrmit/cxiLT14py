@@ -90,7 +90,11 @@ cenx, ceny = atp.args.cenx, atp.args.ceny
 # set up qarrays
 #
 pixel_width = 109.8e-6
+<<<<<<< HEAD
 qbins = ac.qbins( nq, atp.args.dz, atp.args.wavelength, pixel_width) 
+=======
+qbins = ac.qbins( nq, atp.args.dz, atp.args.wl, pixel_width*qmax/float(nq))  # correction for q binning on pixel width 
+>>>>>>> origin/master
 
 
 
