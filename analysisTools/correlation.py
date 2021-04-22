@@ -56,9 +56,9 @@ class angular_correlation:
         return out
 
 
-    def qbins( self, nq, dz, wl, pw ):
+    def qbins( self, nq, pmax, dz, wl, pw ):
 
-        qmax = (2/wl)*np.sin( np.arctan(nq*pw/dz)/2.0 )
+        qmax = (2/wl)*np.sin( np.arctan(pmax*pw/dz)/2.0 )
 
         qind = np.arange(nq)*qmax/float(nq)
 
