@@ -166,10 +166,13 @@ class psanaBlackBox:
             output = pval
         return output
 
-    def qarrays( self, evt, cx=0.0, cy=0.0 ):
+    def qarrays( self, evt, cx=0.0, cy=0.0, dz=-1, wavelength=-1 ):
         
-        dz = self.get_detector_z( evt ) + (0.139-0.567)
-        wavelength = self.get_wavelength( evt )
+        if dz == -1:
+            dz = self.get_detector_z( evt ) + (0.139-0.567)
+
+        if wavelength == -1:
+            wavelength = self.get_wavelength( evt )
         q0 = 1/wavelength
 
         qx = self.cspad.coords_x( evt ) * q0 / dz #(self.cspad.coords_z(evt) + dz )
