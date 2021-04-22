@@ -64,7 +64,7 @@ class angular_correlation:
 
         qpix = (dz/pw)*np.tan(2.0 * np.arcsin( qind*(wl/2.0) ))
 
-        return floor(qpix)
+        return np.floor(qpix)
 
 
     def polar_plot_subtract_rmean( self, pplot ):

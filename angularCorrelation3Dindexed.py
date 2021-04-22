@@ -54,7 +54,7 @@ print "diffCorr", atp.args.diffCorr
 # write all the input arguments to a log file
 atp.write_all_params_to_file( script=atp.parser.prog )
 
-
+print "wavelength, dz", atp.args.wavelength, atp.args.dz
 #
 # Set up the psana variables from psana wrapper
 #
@@ -90,7 +90,7 @@ cenx, ceny = atp.args.cenx, atp.args.ceny
 # set up qarrays
 #
 pixel_width = 109.8e-6
-qbins = at.correlation.qbins( nq, atp.args.dz, atp.args.wl, pixel_width) 
+qbins = ac.qbins( nq, atp.args.dz, atp.args.wavelength, pixel_width) 
 
 
 
