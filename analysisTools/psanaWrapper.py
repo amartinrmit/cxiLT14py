@@ -68,6 +68,8 @@ class psanaBlackBox:
         self.y *= 1e-6
         self.z  = self.get_detector_z(self.evt)
         self.pol = 1 - self.x**2 / (self.x**2 + self.y**2 + self.z**2)
+
+        print "DETECTOR Z DISTANCE :", self.z
         
         # load gain (such that gain correction: im = data / gain)
         if gain_fnam is not None :
@@ -168,11 +170,17 @@ class psanaBlackBox:
 
     def qarrays( self, evt, cx=0.0, cy=0.0, dz=-1, wavelength=-1 ):
         
+<<<<<<< HEAD
         if dz == -1:
             dz = self.get_detector_z( evt ) + (0.139-0.567)
 
         if wavelength == -1:
             wavelength = self.get_wavelength( evt )
+=======
+        dz = self.get_detector_z( evt ) + (0.139-0.56785)
+        wavelength = self.get_wavelength( evt )
+        print "DEBUG qarrays dz", dz, wavelength
+>>>>>>> 5a8d2c3ea1ed4a07a68d4f2291834e24ec1038fb
         q0 = 1/wavelength
 
         qx = self.cspad.coords_x( evt ) * q0 / dz #(self.cspad.coords_z(evt) + dz )

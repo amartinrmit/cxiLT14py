@@ -29,6 +29,7 @@ class powder:
         self.qstep = (qmax-qmin)/float(nqbins)
         self.nqbins = nqbins
         self.qsamps = np.zeros( nqbins )
+        print "qmin qmax qstep", qmin, qmax, self.qstep
 
         #
         # loop over qbins

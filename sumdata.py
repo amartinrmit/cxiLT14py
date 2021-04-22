@@ -53,6 +53,7 @@ if atp.args.applymask == True:
 # sum nframes of data from a run
 #
 datasum = psbb.cspad.calib( psbb.evt ) * 0.0
+datasumsq = psbb.cspad.calib( psbb.evt ) * 0.0
 
 fname = atp.args.outpath+"intensitydata.txt"
 f = open( fname, "w" )
@@ -84,6 +85,7 @@ for i in np.arange(atp.args.nframes) +atp.args.nstart:
 
     nframes += 1
     datasum += data
+    datasumsq += data**2
     print data.sum()
     f = open( fname, "a" )
     f.write( str(i)+","+str(data.sum())+"\n")
@@ -93,14 +95,20 @@ print "Total frames included in sum", nframes
 
 if atp.args.average == True:
     datasum *= 1.0/float(nframes)
+    datasumsq *= 1.0/float(nframes)
+    
 
 if atp.args.applymask == True:
     datasum *= mask
+    datasumsq *= mask
 
+iz = np.where( datasumsq > 0.0 )
+datasumsq[iz] = np.sqrt( datasumsq[iz] - datasum[iz]**2)
 
 if atp.args.assemble == True:
     output = psbb.cspad.image( evt, datasum)
     maska = psbb.cspad.image( evt, mask)
+    outputsq = psbb.cspad.image( evt, datasumsq )
 else:
     output = datasum
     maska = mask
@@ -114,6 +122,7 @@ else:
 #    at.io.h5write( outname, output, field="/datasum" )
 print output.shape
 at.io.saveImage( atp.args, output, "datasum", prog=atp.parser.prog )   
+at.io.saveImage( atp.args, outputsq, "datasum_std", prog=atp.parser.prog )   
 
 if atp.args.applymask==True:
     at.io.saveImage( atp.args, maska, "mask", prog=atp.parser.prog )   
